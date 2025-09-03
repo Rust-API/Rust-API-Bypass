@@ -1,0 +1,103 @@
+Path,Library,Start_line,End_line,Unchecked Func,Checked Func,Safety Conditions,Safety Condition Category,User visible,Flag
+../../refs/rust/library/core/src/slice/mod.rs,[T],1312,1323,"    pub const unsafe fn as_chunks_unchecked<const N: usize>(&self) -> &[[T; N]] {
+        assert_unsafe_precondition!(
+            check_language_ub,
+            ""slice::as_chunks_unchecked requires `N != 0` and the slice to split exactly into `N`-element chunks"",
+            (n: usize = N, len: usize = self.len()) => n != 0 && len % n == 0,
+        );
+        // SAFETY: Caller must guarantee that `N` is nonzero and exactly divides the slice length
+        let new_len = unsafe { exact_div(self.len(), N) };
+        // SAFETY: We cast a slice of `new_len * N` elements into
+        // a slice of `new_len` many `N` elements chunks.
+        unsafe { from_raw_parts(self.as_ptr().cast(), new_len) }
+    }
+","pub const fn as_chunks<const N: usize>(&self) -> (&[[T; N]], &[T]) {
+        assert!(N != 0, ""chunk size must be non-zero"");
+        let len_rounded_down = self.len() / N * N;
+        // SAFETY: The rounded-down value is always the same or smaller than the
+        // original length, and thus must be in-bounds of the slice.
+        let (multiple_of_n, remainder) = unsafe { self.split_at_unchecked(len_rounded_down) };
+        // SAFETY: We already panicked for zero, and ensured by construction
+        // that the length of the subslice is a multiple of N.
+        let array_slice = unsafe { multiple_of_n.as_chunks_unchecked() };
+        (array_slice, remainder)
+    }",The caller has to promise the N is nom-zero and can exactly divide the slice length.,nonzero/div,exposed,
+../../refs/rust/library/core/src/slice/mod.rs,[T],1472,1483,"    pub const unsafe fn as_chunks_unchecked_mut<const N: usize>(&mut self) -> &mut [[T; N]] {
+        assert_unsafe_precondition!(
+            check_language_ub,
+            ""slice::as_chunks_unchecked requires `N != 0` and the slice to split exactly into `N`-element chunks"",
+            (n: usize = N, len: usize = self.len()) => n != 0 && len % n == 0
+        );
+        // SAFETY: Caller must guarantee that `N` is nonzero and exactly divides the slice length
+        let new_len = unsafe { exact_div(self.len(), N) };
+        // SAFETY: We cast a slice of `new_len * N` elements into
+        // a slice of `new_len` many `N` elements chunks.
+        unsafe { from_raw_parts_mut(self.as_mut_ptr().cast(), new_len) }
+    }
+","pub const fn as_chunks_mut<const N: usize>(&mut self) -> (&mut [[T; N]], &mut [T]) {
+        assert!(N != 0, ""chunk size must be non-zero"");
+        let len_rounded_down = self.len() / N * N;
+        // SAFETY: The rounded-down value is always the same or smaller than the
+        // original length, and thus must be in-bounds of the slice.
+        let (multiple_of_n, remainder) = unsafe { self.split_at_mut_unchecked(len_rounded_down) };
+        // SAFETY: We already panicked for zero, and ensured by construction
+        // that the length of the subslice is a multiple of N.
+        let array_slice = unsafe { multiple_of_n.as_chunks_unchecked_mut() };
+        (array_slice, remainder)
+    }",The caller has to promise the N is nom-zero and can exactly divide the slice length.,nonzero/div,exposed,
+../../refs/rust/library/core/src/num/niche_types.rs,num,52,55,"            pub const unsafe fn new_unchecked(val: $int) -> Self {
+                // SAFETY: Caller promised that `val` is non-zero.
+                unsafe { $name(val) }
+            }
+","pub const fn new(val: $int) -> Option<Self> {
+                if (val as $uint) >= ($low as $uint) && (val as $uint) <= ($high as $uint) {
+                    // SAFETY: just checked the inclusive range
+                    Some(unsafe { $name(val) })
+                } else {
+                    None
+                }
+            }","This is a group of many similar structs constructed with integer. However, all of them are required the value is non-zero.",nonzero,exposed,
+../../refs/rust/library/core/src/num/nonzero.rs,Nonzero<T>,391,406,"    pub const unsafe fn new_unchecked(n: T) -> Self {
+        match Self::new(n) {
+            Some(n) => n,
+            None => {
+                // SAFETY: The caller guarantees that `n` is non-zero, so this is unreachable.
+                unsafe {
+                    ub_checks::assert_unsafe_precondition!(
+                        check_language_ub,
+                        ""NonZero::new_unchecked requires the argument to be non-zero"",
+                        () => false,
+                    );
+                    intrinsics::unreachable()
+                }
+            }
+        }
+    }
+","pub const fn new(n: T) -> Option<Self> {
+        // SAFETY: Memory layout optimization guarantees that `Option<NonZero<T>>` has
+        //         the same layout and size as `T`, with `0` representing `None`.
+        unsafe { intrinsics::transmute_unchecked(n) }
+    }",The caller has to promise that the argument has to be non-zero.,nonzero,exposed,
+../../refs/rust/library/core/src/num/nonzero.rs,NonZero<T>,431,446,"    pub unsafe fn from_mut_unchecked(n: &mut T) -> &mut Self {
+        match Self::from_mut(n) {
+            Some(n) => n,
+            None => {
+                // SAFETY: The caller guarantees that `n` references a value that is non-zero, so this is unreachable.
+                unsafe {
+                    ub_checks::assert_unsafe_precondition!(
+                        check_library_ub,
+                        ""NonZero::from_mut_unchecked requires the argument to dereference as non-zero"",
+                        () => false,
+                    );
+                    intrinsics::unreachable()
+                }
+            }
+        }
+    }
+","pub fn from_mut(n: &mut T) -> Option<&mut Self> {
+        // SAFETY: Memory layout optimization guarantees that `Option<NonZero<T>>` has
+        //         the same layout and size as `T`, with `0` representing `None`.
+        let opt_n = unsafe { &mut *(ptr::from_mut(n).cast::<Option<Self>>()) };
+
+        opt_n.as_mut()
+    }",The caller has to promise the refrence value is non-zero.,nonzero,exposed,

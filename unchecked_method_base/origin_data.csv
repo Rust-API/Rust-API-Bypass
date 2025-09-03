@@ -1,0 +1,889 @@
+Path,Library,Start_line,End_line,Func
+../../refs/rust/library/core/src/char/mod.rs,null,141,144,"pub const unsafe fn from_u32_unchecked(i: u32) -> char {
+    // SAFETY: the safety contract must be upheld by the caller.
+    unsafe { self::convert::from_u32_unchecked(i) }
+}
+"
+../../refs/rust/library/core/src/char/methods.rs,null,236,239,"    pub const unsafe fn from_u32_unchecked(i: u32) -> char {
+        // SAFETY: the safety contract must be upheld by the caller.
+        unsafe { super::convert::from_u32_unchecked(i) }
+    }
+"
+../../refs/rust/library/core/src/ffi/c_str.rs,null,396,426,"    pub const unsafe fn from_bytes_with_nul_unchecked(bytes: &[u8]) -> &CStr {
+        const_eval_select!(
+            @capture { bytes: &[u8] } -> &CStr:
+            if const {
+                // Saturating so that an empty slice panics in the assert with a good
+                // message, not here due to underflow.
+                let mut i = bytes.len().saturating_sub(1);
+                assert!(!bytes.is_empty() && bytes[i] == 0, ""input was not nul-terminated"");
+
+                // Ending nul byte exists, skip to the rest.
+                while i != 0 {
+                    i -= 1;
+                    let byte = bytes[i];
+                    assert!(byte != 0, ""input contained interior nul"");
+                }
+
+                // SAFETY: See runtime cast comment below.
+                unsafe { &*(bytes as *const [u8] as *const CStr) }
+            } else {
+                // Chance at catching some UB at runtime with debug builds.
+                debug_assert!(!bytes.is_empty() && bytes[bytes.len() - 1] == 0);
+
+                // SAFETY: Casting to CStr is safe because its internal representation
+                // is a [u8] too (safe only inside std).
+                // Dereferencing the obtained pointer is safe because it comes from a
+                // reference. Making a reference is then safe because its lifetime
+                // is bound by the lifetime of the given `bytes`.
+                unsafe { &*(bytes as *const [u8] as *const CStr) }
+            }
+        )
+    }
+"
+../../refs/rust/library/core/src/intrinsics/mod.rs,null,1700,0,
+../../refs/rust/library/core/src/intrinsics/mod.rs,null,2802,0,
+../../refs/rust/library/core/src/intrinsics/mod.rs,null,2812,0,
+../../refs/rust/library/core/src/intrinsics/mod.rs,null,2823,0,
+../../refs/rust/library/core/src/intrinsics/mod.rs,null,2833,0,
+../../refs/rust/library/core/src/intrinsics/mod.rs,null,2843,0,
+../../refs/rust/library/core/src/intrinsics/mod.rs,null,2853,0,
+../../refs/rust/library/core/src/intrinsics/mod.rs,null,2863,0,
+../../refs/rust/library/core/src/option.rs,null,1083,1089,"    pub const unsafe fn unwrap_unchecked(self) -> T {
+        match self {
+            Some(val) => val,
+            // SAFETY: the safety contract must be upheld by the caller.
+            None => unsafe { hint::unreachable_unchecked() },
+        }
+    }
+"
+../../refs/rust/library/core/src/str/converts.rs,null,172,176,"pub const unsafe fn from_utf8_unchecked(v: &[u8]) -> &str {
+    // SAFETY: the caller must guarantee that the bytes `v` are valid UTF-8.
+    // Also relies on `&str` and `&[u8]` having the same layout.
+    unsafe { mem::transmute(v) }
+}
+"
+../../refs/rust/library/core/src/str/converts.rs,null,200,206,"pub const unsafe fn from_utf8_unchecked_mut(v: &mut [u8]) -> &mut str {
+    // SAFETY: the caller must guarantee that the bytes `v`
+    // are valid UTF-8, thus the cast to `*mut str` is safe.
+    // Also, the pointer dereference is safe because that pointer
+    // comes from a reference which is guaranteed to be valid for writes.
+    unsafe { &mut *(v as *mut [u8] as *mut str) }
+}
+"
+../../refs/rust/library/core/src/str/mod.rs,null,301,304,"    pub const unsafe fn from_utf8_unchecked(v: &[u8]) -> &str {
+        // SAFETY: converts::from_utf8_unchecked has the same safety requirements as this function.
+        unsafe { converts::from_utf8_unchecked(v) }
+    }
+"
+../../refs/rust/library/core/src/str/mod.rs,null,326,329,"    pub const unsafe fn from_utf8_unchecked_mut(v: &mut [u8]) -> &mut str {
+        // SAFETY: converts::from_utf8_unchecked_mut has the same safety requirements as this function.
+        unsafe { converts::from_utf8_unchecked_mut(v) }
+    }
+"
+../../refs/rust/library/core/src/ascii/ascii_char.rs,null,469,472,"    pub const unsafe fn from_u8_unchecked(b: u8) -> Self {
+        // SAFETY: Our safety precondition is that `b` is in-range.
+        unsafe { transmute(b) }
+    }
+"
+../../refs/rust/library/core/src/ascii/ascii_char.rs,null,506,520,"    pub const unsafe fn digit_unchecked(d: u8) -> Self {
+        assert_unsafe_precondition!(
+            check_language_ub,
+            ""`ascii::Char::digit_unchecked` input cannot exceed 9."",
+            (d: u8 = d) => d < 10
+        );
+
+        // SAFETY: `'0'` through `'9'` are U+00030 through U+0039,
+        // so because `d` must be 64 or less the addition can return at most
+        // 112 (0x70), which doesn't overflow and is within the ASCII range.
+        unsafe {
+            let byte = b'0'.unchecked_add(d);
+            Self::from_u8_unchecked(byte)
+        }
+    }
+"
+../../refs/rust/library/core/src/hint.rs,null,101,110,"pub const unsafe fn unreachable_unchecked() -> ! {
+    ub_checks::assert_unsafe_precondition!(
+        check_language_ub,
+        ""hint::unreachable_unchecked must never be reached"",
+        () => false
+    );
+    // SAFETY: the safety contract for `intrinsics::unreachable` must
+    // be upheld by the caller.
+    unsafe { intrinsics::unreachable() }
+}
+"
+../../refs/rust/library/core/src/hint.rs,null,200,210,"pub const unsafe fn assert_unchecked(cond: bool) {
+    // SAFETY: The caller promised `cond` is true.
+    unsafe {
+        ub_checks::assert_unsafe_precondition!(
+            check_language_ub,
+            ""hint::assert_unchecked must never be called when the condition is false"",
+            (cond: bool = cond) => cond,
+        );
+        crate::intrinsics::assume(cond);
+    }
+}
+"
+../../refs/rust/library/core/src/alloc/layout.rs,null,129,141,"    pub const unsafe fn from_size_align_unchecked(size: usize, align: usize) -> Self {
+        assert_unsafe_precondition!(
+            check_library_ub,
+            ""Layout::from_size_align_unchecked requires that align is a power of 2 \
+            and the rounded-up allocation size does not exceed isize::MAX"",
+            (
+                size: usize = size,
+                align: usize = align,
+            ) => Layout::is_size_align_valid(size, align)
+        );
+        // SAFETY: the caller is required to uphold the preconditions.
+        unsafe { Layout { size, align: mem::transmute(align) } }
+    }
+"
+../../refs/rust/library/core/src/pin.rs,null,1357,1359,"    pub const unsafe fn new_unchecked(pointer: Ptr) -> Pin<Ptr> {
+        Pin { __pointer: pointer }
+    }
+"
+../../refs/rust/library/core/src/pin.rs,null,1510,1512,"    pub const unsafe fn into_inner_unchecked(pin: Pin<Ptr>) -> Ptr {
+        pin.__pointer
+    }
+"
+../../refs/rust/library/core/src/pin.rs,null,1615,1617,"    pub const unsafe fn get_unchecked_mut(self) -> &'a mut T {
+        self.__pointer
+    }
+"
+../../refs/rust/library/core/src/cell.rs,null,2284,2287,"    pub const unsafe fn as_ref_unchecked(&self) -> &T {
+        // SAFETY: pointer comes from `&self` so naturally satisfies ptr-to-ref invariants.
+        unsafe { self.get().as_ref_unchecked() }
+    }
+"
+../../refs/rust/library/core/src/cell.rs,null,2312,2315,"    pub const unsafe fn as_mut_unchecked(&self) -> &mut T {
+        // SAFETY: pointer comes from `&self` so naturally satisfies ptr-to-ref invariants.
+        unsafe { self.get().as_mut_unchecked() }
+    }
+"
+../../refs/rust/library/core/src/ptr/non_null.rs,null,219,229,"    pub const unsafe fn new_unchecked(ptr: *mut T) -> Self {
+        // SAFETY: the caller must guarantee that `ptr` is non-null.
+        unsafe {
+            assert_unsafe_precondition!(
+                check_language_ub,
+                ""NonNull::new_unchecked requires that the pointer is non-null"",
+                (ptr: *mut () = ptr as *mut ()) => !ptr.is_null()
+            );
+            NonNull { pointer: ptr as _ }
+        }
+    }
+"
+../../refs/rust/library/core/src/ptr/alignment.rs,null,76,86,"    pub const unsafe fn new_unchecked(align: usize) -> Self {
+        assert_unsafe_precondition!(
+            check_language_ub,
+            ""Alignment::new_unchecked requires a power of two"",
+            (align: usize = align) => align.is_power_of_two()
+        );
+
+        // SAFETY: By precondition, this must be a power of two, and
+        // our variants encompass all possible powers of two.
+        unsafe { mem::transmute::<usize, Alignment>(align) }
+    }
+"
+../../refs/rust/library/core/src/array/iter.rs,null,139,0,
+../../refs/rust/library/core/src/array/ascii.rs,null,39,44,"    pub const unsafe fn as_ascii_unchecked(&self) -> &[ascii::Char; N] {
+        let byte_ptr: *const [u8; N] = self;
+        let ascii_ptr = byte_ptr as *const [ascii::Char; N];
+        // SAFETY: The caller promised all the bytes are ASCII
+        unsafe { &*ascii_ptr }
+    }
+"
+../../refs/rust/library/core/src/slice/mod.rs,null,958,974,"    pub const unsafe fn swap_unchecked(&mut self, a: usize, b: usize) {
+        assert_unsafe_precondition!(
+            check_library_ub,
+            ""slice::swap_unchecked requires that the indices are within the slice"",
+            (
+                len: usize = self.len(),
+                a: usize = a,
+                b: usize = b,
+            ) => a < len && b < len,
+        );
+
+        let ptr = self.as_mut_ptr();
+        // SAFETY: caller has to guarantee that `a < self.len()` and `b < self.len()`
+        unsafe {
+            ptr::swap(ptr.add(a), ptr.add(b));
+        }
+    }
+"
+../../refs/rust/library/core/src/slice/mod.rs,null,1312,1323,"    pub const unsafe fn as_chunks_unchecked<const N: usize>(&self) -> &[[T; N]] {
+        assert_unsafe_precondition!(
+            check_language_ub,
+            ""slice::as_chunks_unchecked requires `N != 0` and the slice to split exactly into `N`-element chunks"",
+            (n: usize = N, len: usize = self.len()) => n != 0 && len % n == 0,
+        );
+        // SAFETY: Caller must guarantee that `N` is nonzero and exactly divides the slice length
+        let new_len = unsafe { exact_div(self.len(), N) };
+        // SAFETY: We cast a slice of `new_len * N` elements into
+        // a slice of `new_len` many `N` elements chunks.
+        unsafe { from_raw_parts(self.as_ptr().cast(), new_len) }
+    }
+"
+../../refs/rust/library/core/src/slice/mod.rs,null,1472,1483,"    pub const unsafe fn as_chunks_unchecked_mut<const N: usize>(&mut self) -> &mut [[T; N]] {
+        assert_unsafe_precondition!(
+            check_language_ub,
+            ""slice::as_chunks_unchecked requires `N != 0` and the slice to split exactly into `N`-element chunks"",
+            (n: usize = N, len: usize = self.len()) => n != 0 && len % n == 0
+        );
+        // SAFETY: Caller must guarantee that `N` is nonzero and exactly divides the slice length
+        let new_len = unsafe { exact_div(self.len(), N) };
+        // SAFETY: We cast a slice of `new_len * N` elements into
+        // a slice of `new_len` many `N` elements chunks.
+        unsafe { from_raw_parts_mut(self.as_mut_ptr().cast(), new_len) }
+    }
+"
+../../refs/rust/library/core/src/slice/mod.rs,null,1999,2015,"    pub const unsafe fn split_at_unchecked(&self, mid: usize) -> (&[T], &[T]) {
+        // FIXME(const-hack): the const function `from_raw_parts` is used to make this
+        // function const; previously the implementation used
+        // `(self.get_unchecked(..mid), self.get_unchecked(mid..))`
+
+        let len = self.len();
+        let ptr = self.as_ptr();
+
+        assert_unsafe_precondition!(
+            check_library_ub,
+            ""slice::split_at_unchecked requires the index to be within the slice"",
+            (mid: usize = mid, len: usize = len) => mid <= len,
+        );
+
+        // SAFETY: Caller has to check that `0 <= mid <= self.len()`
+        unsafe { (from_raw_parts(ptr, mid), from_raw_parts(ptr.add(mid), unchecked_sub(len, mid))) }
+    }
+"
+../../refs/rust/library/core/src/slice/mod.rs,null,2052,2072,"    pub const unsafe fn split_at_mut_unchecked(&mut self, mid: usize) -> (&mut [T], &mut [T]) {
+        let len = self.len();
+        let ptr = self.as_mut_ptr();
+
+        assert_unsafe_precondition!(
+            check_library_ub,
+            ""slice::split_at_mut_unchecked requires the index to be within the slice"",
+            (mid: usize = mid, len: usize = len) => mid <= len,
+        );
+
+        // SAFETY: Caller has to check that `0 <= mid <= self.len()`.
+        //
+        // `[ptr; mid]` and `[mid; len]` are not overlapping, so returning a mutable reference
+        // is fine.
+        unsafe {
+            (
+                from_raw_parts_mut(ptr, mid),
+                from_raw_parts_mut(ptr.add(mid), unchecked_sub(len, mid)),
+            )
+        }
+    }
+"
+../../refs/rust/library/core/src/slice/ascii.rs,null,43,48,"    pub const unsafe fn as_ascii_unchecked(&self) -> &[ascii::Char] {
+        let byte_ptr: *const [u8] = self;
+        let ascii_ptr = byte_ptr as *const [ascii::Char];
+        // SAFETY: The caller promised all the bytes are ASCII
+        unsafe { &*ascii_ptr }
+    }
+"
+../../refs/rust/library/core/src/ptr/const_ptr.rs,null,327,330,"    pub const unsafe fn as_ref_unchecked<'a>(self) -> &'a T {
+        // SAFETY: the caller must guarantee that `self` is valid for a reference
+        unsafe { &*self }
+    }
+"
+../../refs/rust/library/core/src/ptr/unique.rs,null,88,91,"    pub const unsafe fn new_unchecked(ptr: *mut T) -> Self {
+        // SAFETY: the caller must guarantee that `ptr` is non-null.
+        unsafe { Unique { pointer: NonNull::new_unchecked(ptr), _marker: PhantomData } }
+    }
+"
+../../refs/rust/library/core/src/ptr/mut_ptr.rs,null,319,322,"    pub const unsafe fn as_ref_unchecked<'a>(self) -> &'a T {
+        // SAFETY: the caller must guarantee that `self` is valid for a reference
+        unsafe { &*self }
+    }
+"
+../../refs/rust/library/core/src/ptr/mut_ptr.rs,null,681,684,"    pub const unsafe fn as_mut_unchecked<'a>(self) -> &'a mut T {
+        // SAFETY: the caller must guarantee that `self` is valid for a reference
+        unsafe { &mut *self }
+    }
+"
+../../refs/rust/library/core/src/num/nonzero.rs,null,391,406,"    pub const unsafe fn new_unchecked(n: T) -> Self {
+        match Self::new(n) {
+            Some(n) => n,
+            None => {
+                // SAFETY: The caller guarantees that `n` is non-zero, so this is unreachable.
+                unsafe {
+                    ub_checks::assert_unsafe_precondition!(
+                        check_language_ub,
+                        ""NonZero::new_unchecked requires the argument to be non-zero"",
+                        () => false,
+                    );
+                    intrinsics::unreachable()
+                }
+            }
+        }
+    }
+"
+../../refs/rust/library/core/src/num/nonzero.rs,null,1089,1092,"            pub const unsafe fn unchecked_mul(self, other: Self) -> Self {
+                // SAFETY: The caller ensures there is no overflow.
+                unsafe { Self::new_unchecked(self.get().unchecked_mul(other.get())) }
+            }
+"
+../../refs/rust/library/core/src/num/nonzero.rs,null,1491,1494,"        pub const unsafe fn unchecked_add(self, other: $Int) -> Self {
+            // SAFETY: The caller ensures there is no overflow.
+            unsafe { Self::new_unchecked(self.get().unchecked_add(other)) }
+        }
+"
+../../refs/rust/library/core/src/num/int_macros.rs,null,559,573,"        pub const unsafe fn unchecked_add(self, rhs: Self) -> Self {
+            assert_unsafe_precondition!(
+                check_language_ub,
+                concat!(stringify!($SelfT), ""::unchecked_add cannot overflow""),
+                (
+                    lhs: $SelfT = self,
+                    rhs: $SelfT = rhs,
+                ) => !lhs.overflowing_add(rhs).1,
+            );
+
+            // SAFETY: this is guaranteed to be safe by the caller.
+            unsafe {
+                intrinsics::unchecked_add(self, rhs)
+            }
+        }
+"
+../../refs/rust/library/core/src/num/int_macros.rs,null,709,723,"        pub const unsafe fn unchecked_sub(self, rhs: Self) -> Self {
+            assert_unsafe_precondition!(
+                check_language_ub,
+                concat!(stringify!($SelfT), ""::unchecked_sub cannot overflow""),
+                (
+                    lhs: $SelfT = self,
+                    rhs: $SelfT = rhs,
+                ) => !lhs.overflowing_sub(rhs).1,
+            );
+
+            // SAFETY: this is guaranteed to be safe by the caller.
+            unsafe {
+                intrinsics::unchecked_sub(self, rhs)
+            }
+        }
+"
+../../refs/rust/library/core/src/num/int_macros.rs,null,859,873,"        pub const unsafe fn unchecked_mul(self, rhs: Self) -> Self {
+            assert_unsafe_precondition!(
+                check_language_ub,
+                concat!(stringify!($SelfT), ""::unchecked_mul cannot overflow""),
+                (
+                    lhs: $SelfT = self,
+                    rhs: $SelfT = rhs,
+                ) => !lhs.overflowing_mul(rhs).1,
+            );
+
+            // SAFETY: this is guaranteed to be safe by the caller.
+            unsafe {
+                intrinsics::unchecked_mul(self, rhs)
+            }
+        }
+"
+../../refs/rust/library/core/src/num/int_macros.rs,null,1203,1216,"        pub const unsafe fn unchecked_neg(self) -> Self {
+            assert_unsafe_precondition!(
+                check_language_ub,
+                concat!(stringify!($SelfT), ""::unchecked_neg cannot overflow""),
+                (
+                    lhs: $SelfT = self,
+                ) => !lhs.overflowing_neg().1,
+            );
+
+            // SAFETY: this is guaranteed to be safe by the caller.
+            unsafe {
+                intrinsics::unchecked_sub(0, self)
+            }
+        }
+"
+../../refs/rust/library/core/src/num/int_macros.rs,null,1331,1344,"        pub const unsafe fn unchecked_shl(self, rhs: u32) -> Self {
+            assert_unsafe_precondition!(
+                check_language_ub,
+                concat!(stringify!($SelfT), ""::unchecked_shl cannot overflow""),
+                (
+                    rhs: u32 = rhs,
+                ) => rhs < <$ActualT>::BITS,
+            );
+
+            // SAFETY: this is guaranteed to be safe by the caller.
+            unsafe {
+                intrinsics::unchecked_shl(self, rhs)
+            }
+        }
+"
+../../refs/rust/library/core/src/num/int_macros.rs,null,1452,1465,"        pub const unsafe fn unchecked_shr(self, rhs: u32) -> Self {
+            assert_unsafe_precondition!(
+                check_language_ub,
+                concat!(stringify!($SelfT), ""::unchecked_shr cannot overflow""),
+                (
+                    rhs: u32 = rhs,
+                ) => rhs < <$ActualT>::BITS,
+            );
+
+            // SAFETY: this is guaranteed to be safe by the caller.
+            unsafe {
+                intrinsics::unchecked_shr(self, rhs)
+            }
+        }
+"
+../../refs/rust/library/core/src/num/uint_macros.rs,null,605,619,"        pub const unsafe fn unchecked_add(self, rhs: Self) -> Self {
+            assert_unsafe_precondition!(
+                check_language_ub,
+                concat!(stringify!($SelfT), ""::unchecked_add cannot overflow""),
+                (
+                    lhs: $SelfT = self,
+                    rhs: $SelfT = rhs,
+                ) => !lhs.overflowing_add(rhs).1,
+            );
+
+            // SAFETY: this is guaranteed to be safe by the caller.
+            unsafe {
+                intrinsics::unchecked_add(self, rhs)
+            }
+        }
+"
+../../refs/rust/library/core/src/num/uint_macros.rs,null,795,809,"        pub const unsafe fn unchecked_sub(self, rhs: Self) -> Self {
+            assert_unsafe_precondition!(
+                check_language_ub,
+                concat!(stringify!($SelfT), ""::unchecked_sub cannot overflow""),
+                (
+                    lhs: $SelfT = self,
+                    rhs: $SelfT = rhs,
+                ) => !lhs.overflowing_sub(rhs).1,
+            );
+
+            // SAFETY: this is guaranteed to be safe by the caller.
+            unsafe {
+                intrinsics::unchecked_sub(self, rhs)
+            }
+        }
+"
+../../refs/rust/library/core/src/num/uint_macros.rs,null,978,992,"        pub const unsafe fn unchecked_mul(self, rhs: Self) -> Self {
+            assert_unsafe_precondition!(
+                check_language_ub,
+                concat!(stringify!($SelfT), ""::unchecked_mul cannot overflow""),
+                (
+                    lhs: $SelfT = self,
+                    rhs: $SelfT = rhs,
+                ) => !lhs.overflowing_mul(rhs).1,
+            );
+
+            // SAFETY: this is guaranteed to be safe by the caller.
+            unsafe {
+                intrinsics::unchecked_mul(self, rhs)
+            }
+        }
+"
+../../refs/rust/library/core/src/num/uint_macros.rs,null,1265,1277,"        pub const unsafe fn unchecked_disjoint_bitor(self, other: Self) -> Self {
+            assert_unsafe_precondition!(
+                check_language_ub,
+                concat!(stringify!($SelfT), ""::unchecked_disjoint_bitor cannot have overlapping bits""),
+                (
+                    lhs: $SelfT = self,
+                    rhs: $SelfT = other,
+                ) => (lhs & rhs) == 0,
+            );
+
+            // SAFETY: Same precondition
+            unsafe { intrinsics::disjoint_bitor(self, other) }
+        }
+"
+../../refs/rust/library/core/src/num/uint_macros.rs,null,1592,1605,"        pub const unsafe fn unchecked_shl(self, rhs: u32) -> Self {
+            assert_unsafe_precondition!(
+                check_language_ub,
+                concat!(stringify!($SelfT), ""::unchecked_shl cannot overflow""),
+                (
+                    rhs: u32 = rhs,
+                ) => rhs < <$ActualT>::BITS,
+            );
+
+            // SAFETY: this is guaranteed to be safe by the caller.
+            unsafe {
+                intrinsics::unchecked_shl(self, rhs)
+            }
+        }
+"
+../../refs/rust/library/core/src/num/uint_macros.rs,null,1713,1726,"        pub const unsafe fn unchecked_shr(self, rhs: u32) -> Self {
+            assert_unsafe_precondition!(
+                check_language_ub,
+                concat!(stringify!($SelfT), ""::unchecked_shr cannot overflow""),
+                (
+                    rhs: u32 = rhs,
+                ) => rhs < <$ActualT>::BITS,
+            );
+
+            // SAFETY: this is guaranteed to be safe by the caller.
+            unsafe {
+                intrinsics::unchecked_shr(self, rhs)
+            }
+        }
+"
+../../refs/rust/library/core/src/num/niche_types.rs,null,52,55,"            pub const unsafe fn new_unchecked(val: $int) -> Self {
+                // SAFETY: Caller promised that `val` is non-zero.
+                unsafe { $name(val) }
+            }
+"
+../../refs/rust/library/portable-simd/crates/core_simd/src/vector.rs,null,451,0,
+../../refs/rust/library/portable-simd/crates/core_simd/src/vector.rs,null,581,0,
+../../refs/rust/library/portable-simd/crates/core_simd/src/vector.rs,null,705,0,
+../../refs/rust/library/portable-simd/crates/core_simd/src/vector.rs,null,808,0,
+../../refs/rust/library/portable-simd/crates/core_simd/src/masks.rs,null,190,196,"    pub unsafe fn from_int_unchecked(value: Simd<T, N>) -> Self {
+        // Safety: the caller must confirm this invariant
+        unsafe {
+            core::intrinsics::assume(<T as Sealed>::valid(value));
+            Self(mask_impl::Mask::from_int_unchecked(value))
+        }
+    }
+"
+../../refs/rust/library/portable-simd/crates/core_simd/src/masks.rs,null,233,236,"    pub unsafe fn test_unchecked(&self, index: usize) -> bool {
+        // Safety: the caller must confirm this invariant
+        unsafe { self.0.test_unchecked(index) }
+    }
+"
+../../refs/rust/library/portable-simd/crates/core_simd/src/masks.rs,null,256,261,"    pub unsafe fn set_unchecked(&mut self, index: usize, value: bool) {
+        // Safety: the caller must confirm this invariant
+        unsafe {
+            self.0.set_unchecked(index, value);
+        }
+    }
+"
+../../refs/rust/library/std/src/sys_common/wtf8.rs,null,60,62,"    pub unsafe fn from_u32_unchecked(value: u32) -> CodePoint {
+        CodePoint { value }
+    }
+"
+../../refs/rust/library/std/src/sys_common/wtf8.rs,null,202,204,"    pub unsafe fn from_bytes_unchecked(value: Vec<u8>) -> Wtf8Buf {
+        Wtf8Buf { bytes: value, is_known_utf8: false }
+    }
+"
+../../refs/rust/library/std/src/sys_common/wtf8.rs,null,626,629,"    pub unsafe fn from_bytes_unchecked(value: &[u8]) -> &Wtf8 {
+        // SAFETY: start with &[u8], end with fancy &[u8]
+        unsafe { &*(value as *const [u8] as *const Wtf8) }
+    }
+"
+../../refs/rust/library/std/src/sys_common/wtf8.rs,null,967,974,"pub unsafe fn slice_unchecked(s: &Wtf8, begin: usize, end: usize) -> &Wtf8 {
+    // SAFETY: memory layout of a &[u8] and &Wtf8 are the same
+    unsafe {
+        let len = end - begin;
+        let start = s.as_bytes().as_ptr().add(begin);
+        Wtf8::from_bytes_unchecked(slice::from_raw_parts(start, len))
+    }
+}
+"
+../../refs/rust/library/std/src/thread/mod.rs,null,461,0,
+../../refs/rust/library/std/src/sys/sync/once_box.rs,null,42,44,"    pub unsafe fn get_unchecked(&self) -> Pin<&T> {
+        unsafe { Pin::new_unchecked(&*self.ptr.load(Relaxed)) }
+    }
+"
+../../refs/rust/library/std/src/collections/hash/map.rs,null,1106,0,
+../../refs/rust/library/std/src/sys/os_str/bytes.rs,null,108,110,"    pub unsafe fn from_encoded_bytes_unchecked(s: Vec<u8>) -> Self {
+        Self { inner: s }
+    }
+"
+../../refs/rust/library/std/src/sys/os_str/bytes.rs,null,243,245,"    pub unsafe fn from_encoded_bytes_unchecked(s: &[u8]) -> &Slice {
+        unsafe { mem::transmute(s) }
+    }
+"
+../../refs/rust/library/std/src/ffi/os_str.rs,null,183,185,"    pub unsafe fn from_encoded_bytes_unchecked(bytes: Vec<u8>) -> Self {
+        OsString { inner: unsafe { Buf::from_encoded_bytes_unchecked(bytes) } }
+    }
+"
+../../refs/rust/library/std/src/ffi/os_str.rs,null,863,865,"    pub unsafe fn from_encoded_bytes_unchecked(bytes: &[u8]) -> &Self {
+        Self::from_inner(unsafe { Slice::from_encoded_bytes_unchecked(bytes) })
+    }
+"
+../../refs/rust/library/std/src/sys/os_str/wtf8.rs,null,85,87,"    pub unsafe fn from_encoded_bytes_unchecked(s: Vec<u8>) -> Self {
+        unsafe { Self { inner: Wtf8Buf::from_bytes_unchecked(s) } }
+    }
+"
+../../refs/rust/library/std/src/sys/os_str/wtf8.rs,null,222,224,"    pub unsafe fn from_encoded_bytes_unchecked(s: &[u8]) -> &Slice {
+        unsafe { mem::transmute(Wtf8::from_bytes_unchecked(s)) }
+    }
+"
+../../refs/rust/library/std/src/sys/pal/itron/spin.rs,null,87,91,"    pub unsafe fn get_unchecked(&self) -> (abi::ID, &T) {
+        (self.id.load(Ordering::Acquire) as abi::ID, unsafe {
+            (&*self.extra.get()).assume_init_ref()
+        })
+    }
+"
+../../refs/rust/library/std/src/sys/pal/itron/spin.rs,null,95,105,"    pub unsafe fn set_unchecked(&self, (id, extra): (abi::ID, T)) {
+        debug_assert!(self.get().is_none());
+
+        // Assumption: A positive `abi::ID` fits in `usize`.
+        debug_assert!(id >= 0);
+        debug_assert!(usize::try_from(id).is_ok());
+        let id = id as usize;
+
+        unsafe { *self.extra.get() = MaybeUninit::new(extra) };
+        self.id.store(id, Ordering::Release);
+    }
+"
+../../refs/rust/library/core/src/intrinsics/mod.rs,null,2474,0,
+../../refs/rust/library/alloc/src/str.rs,null,617,619,"pub unsafe fn from_boxed_utf8_unchecked(v: Box<[u8]>) -> Box<str> {
+    unsafe { Box::from_raw(Box::into_raw(v) as *mut str) }
+}
+"
+../../refs/rust/library/alloc/src/sync.rs,null,2523,2527,"    pub unsafe fn get_mut_unchecked(this: &mut Self) -> &mut T {
+        // We are careful to *not* create a reference covering the ""count"" fields, as
+        // this would alias with concurrent access to the reference counts (e.g. by `Weak`).
+        unsafe { &mut (*this.ptr.as_ptr()).data }
+    }
+"
+../../refs/rust/library/alloc/src/sync.rs,null,2701,0,
+../../refs/rust/library/alloc/src/collections/btree/map.rs,null,3191,3218,"    pub unsafe fn insert_after_unchecked(&mut self, key: K, value: V) {
+        let edge = match self.current.take() {
+            None => {
+                // Tree is empty, allocate a new root.
+                // SAFETY: We have no other reference to the tree.
+                let root = unsafe { self.root.reborrow() };
+                debug_assert!(root.is_none());
+                let mut node = NodeRef::new_leaf(self.alloc.clone());
+                // SAFETY: We don't touch the root while the handle is alive.
+                let handle = unsafe { node.borrow_mut().push_with_handle(key, value) };
+                *root = Some(node.forget_type());
+                *self.length += 1;
+                self.current = Some(handle.left_edge());
+                return;
+            }
+            Some(current) => current,
+        };
+
+        let handle = edge.insert_recursing(key, value, self.alloc.clone(), |ins| {
+            drop(ins.left);
+            // SAFETY: The handle to the newly inserted value is always on a
+            // leaf node, so adding a new root node doesn't invalidate it.
+            let root = unsafe { self.root.reborrow().as_mut().unwrap() };
+            root.push_internal_level(self.alloc.clone()).push(ins.kv.0, ins.kv.1, ins.right)
+        });
+        self.current = Some(handle.left_edge());
+        *self.length += 1;
+    }
+"
+../../refs/rust/library/alloc/src/collections/btree/map.rs,null,3234,3264,"    pub unsafe fn insert_before_unchecked(&mut self, key: K, value: V) {
+        let edge = match self.current.take() {
+            None => {
+                // SAFETY: We have no other reference to the tree.
+                match unsafe { self.root.reborrow() } {
+                    root @ None => {
+                        // Tree is empty, allocate a new root.
+                        let mut node = NodeRef::new_leaf(self.alloc.clone());
+                        // SAFETY: We don't touch the root while the handle is alive.
+                        let handle = unsafe { node.borrow_mut().push_with_handle(key, value) };
+                        *root = Some(node.forget_type());
+                        *self.length += 1;
+                        self.current = Some(handle.right_edge());
+                        return;
+                    }
+                    Some(root) => root.borrow_mut().last_leaf_edge(),
+                }
+            }
+            Some(current) => current,
+        };
+
+        let handle = edge.insert_recursing(key, value, self.alloc.clone(), |ins| {
+            drop(ins.left);
+            // SAFETY: The handle to the newly inserted value is always on a
+            // leaf node, so adding a new root node doesn't invalidate it.
+            let root = unsafe { self.root.reborrow().as_mut().unwrap() };
+            root.push_internal_level(self.alloc.clone()).push(ins.kv.0, ins.kv.1, ins.right)
+        });
+        self.current = Some(handle.right_edge());
+        *self.length += 1;
+    }
+"
+../../refs/rust/library/alloc/src/collections/btree/map.rs,null,3396,3398,"    pub unsafe fn insert_after_unchecked(&mut self, key: K, value: V) {
+        unsafe { self.inner.insert_after_unchecked(key, value) }
+    }
+"
+../../refs/rust/library/alloc/src/collections/btree/map.rs,null,3414,3416,"    pub unsafe fn insert_before_unchecked(&mut self, key: K, value: V) {
+        unsafe { self.inner.insert_before_unchecked(key, value) }
+    }
+"
+../../refs/rust/library/alloc/src/rc.rs,null,1811,1815,"    pub unsafe fn get_mut_unchecked(this: &mut Self) -> &mut T {
+        // We are careful to *not* create a reference covering the ""count"" fields, as
+        // this would conflict with accesses to the reference counts (e.g. by `Weak`).
+        unsafe { &mut (*this.ptr.as_ptr()).value }
+    }
+"
+../../refs/rust/library/alloc/src/rc.rs,null,2044,2049,"    pub unsafe fn downcast_unchecked<T: Any>(self) -> Rc<T, A> {
+        unsafe {
+            let (ptr, alloc) = Rc::into_inner_with_allocator(self);
+            Rc::from_inner_in(ptr.cast(), alloc)
+        }
+    }
+"
+../../refs/rust/library/alloc/src/collections/btree/set.rs,null,2353,2355,"    pub unsafe fn insert_after_unchecked(&mut self, value: T) {
+        unsafe { self.inner.insert_after_unchecked(value, SetValZST) }
+    }
+"
+../../refs/rust/library/alloc/src/collections/btree/set.rs,null,2371,2373,"    pub unsafe fn insert_before_unchecked(&mut self, value: T) {
+        unsafe { self.inner.insert_before_unchecked(value, SetValZST) }
+    }
+"
+../../refs/rust/library/alloc/src/collections/btree/set.rs,null,2439,2441,"    pub unsafe fn insert_after_unchecked(&mut self, value: T) {
+        unsafe { self.inner.insert_after_unchecked(value, SetValZST) }
+    }
+"
+../../refs/rust/library/alloc/src/collections/btree/set.rs,null,2457,2459,"    pub unsafe fn insert_before_unchecked(&mut self, value: T) {
+        unsafe { self.inner.insert_before_unchecked(value, SetValZST) }
+    }
+"
+../../refs/rust/library/alloc/src/boxed/convert.rs,null,394,400,"    pub unsafe fn downcast_unchecked<T: Any>(self) -> Box<T, A> {
+        debug_assert!(self.is::<T>());
+        unsafe {
+            let (raw, alloc): (*mut dyn Any, _) = Box::into_raw_with_allocator(self);
+            Box::from_raw_in(raw as *mut T, alloc)
+        }
+    }
+"
+../../refs/rust/library/alloc/src/boxed/convert.rs,null,453,459,"    pub unsafe fn downcast_unchecked<T: Any>(self) -> Box<T, A> {
+        debug_assert!(self.is::<T>());
+        unsafe {
+            let (raw, alloc): (*mut (dyn Any + Send), _) = Box::into_raw_with_allocator(self);
+            Box::from_raw_in(raw as *mut T, alloc)
+        }
+    }
+"
+../../refs/rust/library/alloc/src/boxed/convert.rs,null,512,519,"    pub unsafe fn downcast_unchecked<T: Any>(self) -> Box<T, A> {
+        debug_assert!(self.is::<T>());
+        unsafe {
+            let (raw, alloc): (*mut (dyn Any + Send + Sync), _) =
+                Box::into_raw_with_allocator(self);
+            Box::from_raw_in(raw as *mut T, alloc)
+        }
+    }
+"
+../../refs/rust/library/core/src/result.rs,null,1490,1496,"    pub unsafe fn unwrap_unchecked(self) -> T {
+        match self {
+            Ok(t) => t,
+            // SAFETY: the safety contract must be upheld by the caller.
+            Err(_) => unsafe { hint::unreachable_unchecked() },
+        }
+    }
+"
+../../refs/rust/library/core/src/result.rs,null,1521,1527,"    pub unsafe fn unwrap_err_unchecked(self) -> E {
+        match self {
+            // SAFETY: the safety contract must be upheld by the caller.
+            Ok(_) => unsafe { hint::unreachable_unchecked() },
+            Err(e) => e,
+        }
+    }
+"
+../../refs/rust/library/core/src/pin.rs,null,1532,0,
+../../refs/rust/library/core/src/pin.rs,null,1636,0,
+../../refs/rust/library/core/src/slice/mod.rs,null,655,0,
+../../refs/rust/library/core/src/slice/mod.rs,null,697,0,
+../../refs/rust/library/core/src/slice/mod.rs,null,4580,0,
+../../refs/rust/library/alloc/src/ffi/c_str.rs,null,335,338,"    pub unsafe fn from_vec_unchecked(v: Vec<u8>) -> Self {
+        debug_assert!(memchr::memchr(0, &v).is_none());
+        unsafe { Self::_from_vec_unchecked(v) }
+    }
+"
+../../refs/rust/library/alloc/src/ffi/c_str.rs,null,625,628,"    pub unsafe fn from_vec_with_nul_unchecked(v: Vec<u8>) -> Self {
+        debug_assert!(memchr::memchr(0, &v).unwrap() + 1 == v.len());
+        unsafe { Self::_from_vec_with_nul_unchecked(v) }
+    }
+"
+../../refs/rust/library/core/src/io/borrowed_buf.rs,null,302,306,"    pub unsafe fn advance_unchecked(&mut self, n: usize) -> &mut Self {
+        self.buf.filled += n;
+        self.buf.init = cmp::max(self.buf.init, self.buf.filled);
+        self
+    }
+"
+../../refs/rust/library/core/src/num/f64.rs,null,1063,0,
+../../refs/rust/library/alloc/src/string.rs,null,1027,1029,"    pub unsafe fn from_utf8_unchecked(bytes: Vec<u8>) -> String {
+        String { vec: bytes }
+    }
+"
+../../refs/rust/library/core/src/any.rs,null,294,298,"    pub unsafe fn downcast_ref_unchecked<T: Any>(&self) -> &T {
+        debug_assert!(self.is::<T>());
+        // SAFETY: caller guarantees that T is the correct type
+        unsafe { &*(self as *const dyn Any as *const T) }
+    }
+"
+../../refs/rust/library/core/src/any.rs,null,324,328,"    pub unsafe fn downcast_mut_unchecked<T: Any>(&mut self) -> &mut T {
+        debug_assert!(self.is::<T>());
+        // SAFETY: caller guarantees that T is the correct type
+        unsafe { &mut *(self as *mut dyn Any as *mut T) }
+    }
+"
+../../refs/rust/library/core/src/any.rs,null,430,433,"    pub unsafe fn downcast_ref_unchecked<T: Any>(&self) -> &T {
+        // SAFETY: guaranteed by caller
+        unsafe { <dyn Any>::downcast_ref_unchecked::<T>(self) }
+    }
+"
+../../refs/rust/library/core/src/any.rs,null,459,462,"    pub unsafe fn downcast_mut_unchecked<T: Any>(&mut self) -> &mut T {
+        // SAFETY: guaranteed by caller
+        unsafe { <dyn Any>::downcast_mut_unchecked::<T>(self) }
+    }
+"
+../../refs/rust/library/core/src/any.rs,null,563,566,"    pub unsafe fn downcast_ref_unchecked<T: Any>(&self) -> &T {
+        // SAFETY: guaranteed by caller
+        unsafe { <dyn Any>::downcast_ref_unchecked::<T>(self) }
+    }
+"
+../../refs/rust/library/core/src/any.rs,null,591,594,"    pub unsafe fn downcast_mut_unchecked<T: Any>(&mut self) -> &mut T {
+        // SAFETY: guaranteed by caller
+        unsafe { <dyn Any>::downcast_mut_unchecked::<T>(self) }
+    }
+"
+../../refs/rust/library/core/src/num/f128.rs,null,872,0,
+../../refs/rust/library/core/src/num/f32.rs,null,1062,0,
+../../refs/rust/library/core/src/str/mod.rs,null,654,659,"    pub unsafe fn get_unchecked<I: SliceIndex<str>>(&self, i: I) -> &I::Output {
+        // SAFETY: the caller must uphold the safety contract for `get_unchecked`;
+        // the slice is dereferenceable because `self` is a safe reference.
+        // The returned pointer is safe because impls of `SliceIndex` have to guarantee that it is.
+        unsafe { &*i.get_unchecked(self) }
+    }
+"
+../../refs/rust/library/core/src/str/mod.rs,null,689,694,"    pub unsafe fn get_unchecked_mut<I: SliceIndex<str>>(&mut self, i: I) -> &mut I::Output {
+        // SAFETY: the caller must uphold the safety contract for `get_unchecked_mut`;
+        // the slice is dereferenceable because `self` is a safe reference.
+        // The returned pointer is safe because impls of `SliceIndex` have to guarantee that it is.
+        unsafe { &mut *i.get_unchecked_mut(self) }
+    }
+"
+../../refs/rust/library/core/src/str/mod.rs,null,740,745,"    pub unsafe fn slice_unchecked(&self, begin: usize, end: usize) -> &str {
+        // SAFETY: the caller must uphold the safety contract for `get_unchecked`;
+        // the slice is dereferenceable because `self` is a safe reference.
+        // The returned pointer is safe because impls of `SliceIndex` have to guarantee that it is.
+        unsafe { &*(begin..end).get_unchecked(self) }
+    }
+"
+../../refs/rust/library/core/src/str/mod.rs,null,774,779,"    pub unsafe fn slice_mut_unchecked(&mut self, begin: usize, end: usize) -> &mut str {
+        // SAFETY: the caller must uphold the safety contract for `get_unchecked_mut`;
+        // the slice is dereferenceable because `self` is a safe reference.
+        // The returned pointer is safe because impls of `SliceIndex` have to guarantee that it is.
+        unsafe { &mut *(begin..end).get_unchecked_mut(self) }
+    }
+"
+../../refs/rust/library/core/src/num/f16.rs,null,858,0,
+../../refs/rust/library/core/src/ptr/const_ptr.rs,null,1576,0,
+../../refs/rust/library/core/src/ptr/non_null.rs,null,1564,0,
+../../refs/rust/library/core/src/num/nonzero.rs,null,431,446,"    pub unsafe fn from_mut_unchecked(n: &mut T) -> &mut Self {
+        match Self::from_mut(n) {
+            Some(n) => n,
+            None => {
+                // SAFETY: The caller guarantees that `n` references a value that is non-zero, so this is unreachable.
+                unsafe {
+                    ub_checks::assert_unsafe_precondition!(
+                        check_library_ub,
+                        ""NonZero::from_mut_unchecked requires the argument to dereference as non-zero"",
+                        () => false,
+                    );
+                    intrinsics::unreachable()
+                }
+            }
+        }
+    }
+"
+../../refs/rust/library/core/src/ptr/mut_ptr.rs,null,1876,1886,"    pub unsafe fn split_at_mut_unchecked(self, mid: usize) -> (*mut [T], *mut [T]) {
+        let len = self.len();
+        let ptr = self.as_mut_ptr();
+
+        // SAFETY: Caller must pass a valid pointer and an index that is in-bounds.
+        let tail = unsafe { ptr.add(mid) };
+        (
+            crate::ptr::slice_from_raw_parts_mut(ptr, mid),
+            crate::ptr::slice_from_raw_parts_mut(tail, len - mid),
+        )
+    }
+"
+../../refs/rust/library/core/src/ptr/mut_ptr.rs,null,1929,0,

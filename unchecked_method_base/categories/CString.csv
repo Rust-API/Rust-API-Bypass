@@ -1,0 +1,126 @@
+Path,Library,Start_line,End_line,Unchecked Func,Checked Func,Safety Conditions,Safety Condition Category,User visible,Flag
+../../refs/rust/library/core/src/ffi/c_str.rs,Cstr,396,426,"    pub const unsafe fn from_bytes_with_nul_unchecked(bytes: &[u8]) -> &CStr {
+        const_eval_select!(
+            @capture { bytes: &[u8] } -> &CStr:
+            if const {
+                // Saturating so that an empty slice panics in the assert with a good
+                // message, not here due to underflow.
+                let mut i = bytes.len().saturating_sub(1);
+                assert!(!bytes.is_empty() && bytes[i] == 0, ""input was not nul-terminated"");
+
+                // Ending nul byte exists, skip to the rest.
+                while i != 0 {
+                    i -= 1;
+                    let byte = bytes[i];
+                    assert!(byte != 0, ""input contained interior nul"");
+                }
+
+                // SAFETY: See runtime cast comment below.
+                unsafe { &*(bytes as *const [u8] as *const CStr) }
+            } else {
+                // Chance at catching some UB at runtime with debug builds.
+                debug_assert!(!bytes.is_empty() && bytes[bytes.len() - 1] == 0);
+
+                // SAFETY: Casting to CStr is safe because its internal representation
+                // is a [u8] too (safe only inside std).
+                // Dereferencing the obtained pointer is safe because it comes from a
+                // reference. Making a reference is then safe because its lifetime
+                // is bound by the lifetime of the given `bytes`.
+                unsafe { &*(bytes as *const [u8] as *const CStr) }
+            }
+        )
+    }
+","pub const fn from_bytes_with_nul(bytes: &[u8]) -> Result<&Self, FromBytesWithNulError> {
+        let nul_pos = memchr::memchr(0, bytes);
+        match nul_pos {
+            Some(nul_pos) if nul_pos + 1 == bytes.len() => {
+                // SAFETY: We know there is only one nul byte, at the end
+                // of the byte slice.
+                Ok(unsafe { Self::from_bytes_with_nul_unchecked(bytes) })
+            }
+            Some(position) => Err(FromBytesWithNulError::InteriorNul { position }),
+            None => Err(FromBytesWithNulError::NotNulTerminated),
+        }
+    }",The caller has to promise the slice is end with nul and don¡¯t contain any interrior nul bytes,Cstring/Nul,exposed,
+../../refs/rust/library/core/src/str/converts.rs,[u8],172,176,"pub const unsafe fn from_utf8_unchecked(v: &[u8]) -> &str {
+    // SAFETY: the caller must guarantee that the bytes `v` are valid UTF-8.
+    // Also relies on `&str` and `&[u8]` having the same layout.
+    unsafe { mem::transmute(v) }
+}
+","pub const fn from_utf8(v: &[u8]) -> Result<&str, Utf8Error> {
+    // FIXME(const-hack): This should use `?` again, once it's `const`
+    match run_utf8_validation(v) {
+        Ok(_) => {
+            // SAFETY: validation succeeded.
+            Ok(unsafe { from_utf8_unchecked(v) })
+        }
+        Err(err) => Err(err),
+    }
+}",The caller has to promise the bytes are valid UTF-8.,String/Char,exposed,
+../../refs/rust/library/core/src/str/converts.rs,str,200,206,"pub const unsafe fn from_utf8_unchecked_mut(v: &mut [u8]) -> &mut str {
+    // SAFETY: the caller must guarantee that the bytes `v`
+    // are valid UTF-8, thus the cast to `*mut str` is safe.
+    // Also, the pointer dereference is safe because that pointer
+    // comes from a reference which is guaranteed to be valid for writes.
+    unsafe { &mut *(v as *mut [u8] as *mut str) }
+}
+","pub const fn from_utf8_mut(v: &mut [u8]) -> Result<&mut str, Utf8Error> {
+    // FIXME(const-hack): This should use `?` again, once it's `const`
+    match run_utf8_validation(v) {
+        Ok(_) => {
+            // SAFETY: validation succeeded.
+            Ok(unsafe { from_utf8_unchecked_mut(v) })
+        }
+        Err(err) => Err(err),
+    }
+}",The caller has to promise the bytes are valid UTF-8.,String/Char,exposed,
+../../refs/rust/library/core/src/str/mod.rs,str,301,304,"    pub const unsafe fn from_utf8_unchecked(v: &[u8]) -> &str {
+        // SAFETY: converts::from_utf8_unchecked has the same safety requirements as this function.
+        unsafe { converts::from_utf8_unchecked(v) }
+    }
+","pub const fn from_utf8(v: &[u8]) -> Result<&str, Utf8Error> {
+        converts::from_utf8(v)
+    }",The caller has to promise the bytes are valid UTF-8.,String/Char,exposed,
+../../refs/rust/library/core/src/str/mod.rs,str,326,329,"    pub const unsafe fn from_utf8_unchecked_mut(v: &mut [u8]) -> &mut str {
+        // SAFETY: converts::from_utf8_unchecked_mut has the same safety requirements as this function.
+        unsafe { converts::from_utf8_unchecked_mut(v) }
+    }
+","pub const fn from_utf8_mut(v: &mut [u8]) -> Result<&mut str, Utf8Error> {
+        converts::from_utf8_mut(v)
+    }",The caller has to promise the bytes are valid UTF-8.,String/Char,exposed,
+../../refs/rust/library/alloc/src/ffi/c_str.rs,Cstring,335,338,"    pub unsafe fn from_vec_unchecked(v: Vec<u8>) -> Self {
+        debug_assert!(memchr::memchr(0, &v).is_none());
+        unsafe { Self::_from_vec_unchecked(v) }
+    }
+","pub fn new<T: Into<Vec<u8>>>(t: T) -> Result<CString, NulError>",The caller has to promise that the input don¡¯t have any interior.,Cstring,exposed,
+../../refs/rust/library/alloc/src/ffi/c_str.rs,CString,625,628,"    pub unsafe fn from_vec_with_nul_unchecked(v: Vec<u8>) -> Self {
+        debug_assert!(memchr::memchr(0, &v).unwrap() + 1 == v.len());
+        unsafe { Self::_from_vec_with_nul_unchecked(v) }
+    }
+","pub fn from_vec_with_nul(v: Vec<u8>) -> Result<Self, FromVecWithNulError> {
+        let nul_pos = memchr::memchr(0, &v);
+        match nul_pos {
+            Some(nul_pos) if nul_pos + 1 == v.len() => {
+                // SAFETY: We know there is only one nul byte, at the end
+                // of the vec.
+                Ok(unsafe { Self::_from_vec_with_nul_unchecked(v) })
+            }
+            Some(nul_pos) => Err(FromVecWithNulError {
+                error_kind: FromBytesWithNulErrorKind::InteriorNul(nul_pos),
+                bytes: v,
+            }),
+            None => Err(FromVecWithNulError {
+                error_kind: FromBytesWithNulErrorKind::NotNulTerminated,
+                bytes: v,
+            }),
+        }
+    }",The caller has to promise the input Vec must have only one nul as its end without any other nul and it cannot be empty.,CString,exposed,
+../../refs/rust/library/alloc/src/string.rs,String,1027,1029,"    pub unsafe fn from_utf8_unchecked(bytes: Vec<u8>) -> String {
+        String { vec: bytes }
+    }
+","pub fn from_utf8(vec: Vec<u8>) -> Result<String, FromUtf8Error> {
+        match str::from_utf8(&vec) {
+            Ok(..) => Ok(String { vec }),
+            Err(e) => Err(FromUtf8Error { bytes: vec, error: e }),
+        }
+    }",The user has to promise the bytes are valid UTF-8.,String,exposed,

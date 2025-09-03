@@ -1,0 +1,60 @@
+Path,Library,Start_line,End_line,Unchecked Func,Checked Func,Safety Conditions,Safety Condition Category,User visiable,Flag
+../../refs/rust/library/core/src/ptr/const_ptr.rs,*const T + <T+?Sized>,327,330,"    pub const unsafe fn as_ref_unchecked<'a>(self) -> &'a T {
+        // SAFETY: the caller must guarantee that `self` is valid for a reference
+        unsafe { &*self }
+    }
+","pub const unsafe fn as_ref<'a>(self) -> Option<&'a T> {
+        // SAFETY: the caller must guarantee that `self` is valid
+        // for a reference if it isn't null.
+        if self.is_null() { None } else { unsafe { Some(&*self) } }
+    }",Caller has to promise the pointer is convertible to a reference.,nullptr,exposed,
+../../refs/rust/library/core/src/ptr/mut_ptr.rs,*mut T + <T+?Sized>,319,322,"    pub const unsafe fn as_ref_unchecked<'a>(self) -> &'a T {
+        // SAFETY: the caller must guarantee that `self` is valid for a reference
+        unsafe { &*self }
+    }
+","pub const unsafe fn as_ref<'a>(self) -> Option<&'a T> {
+        // SAFETY: the caller must guarantee that `self` is valid for a
+        // reference if it isn't null.
+        if self.is_null() { None } else { unsafe { Some(&*self) } }
+    }",Caller has to promise the pointer is convertible to a reference.,nullptr,exposed,
+../../refs/rust/library/core/src/ptr/mut_ptr.rs,*mut T + <T+?Sized>,681,684,"    pub const unsafe fn as_mut_unchecked<'a>(self) -> &'a mut T {
+        // SAFETY: the caller must guarantee that `self` is valid for a reference
+        unsafe { &mut *self }
+    }
+","pub const unsafe fn as_mut<'a>(self) -> Option<&'a mut T> {
+        // SAFETY: the caller must guarantee that `self` is be valid for
+        // a mutable reference if it isn't null.
+        if self.is_null() { None } else { unsafe { Some(&mut *self) } }
+    }",Caller has to promise the pointer is convertible to a reference.,nullptr,exposed,
+../../refs/rust/library/core/src/ptr/non_null.rs,NonNull+<T:?Sized>,219,229,"    pub const unsafe fn new_unchecked(ptr: *mut T) -> Self {
+        // SAFETY: the caller must guarantee that `ptr` is non-null.
+        unsafe {
+            assert_unsafe_precondition!(
+                check_language_ub,
+                ""NonNull::new_unchecked requires that the pointer is non-null"",
+                (ptr: *mut () = ptr as *mut ()) => !ptr.is_null()
+            );
+            NonNull { pointer: ptr as _ }
+        }
+    }
+","
+  pub const fn new(ptr: *mut T) -> Option<Self> {
+        if !ptr.is_null() {
+            // SAFETY: The pointer is already checked and is not null
+            Some(unsafe { Self::new_unchecked(ptr) })
+        } else {
+            None
+        }
+    }
+",Caller has to promise the pointer is non-null.,nullptr,exposed,
+../../refs/rust/library/core/src/ptr/unique.rs,Unique + <T:?Sized>,88,91,"    pub const unsafe fn new_unchecked(ptr: *mut T) -> Self {
+        // SAFETY: the caller must guarantee that `ptr` is non-null.
+        unsafe { Unique { pointer: NonNull::new_unchecked(ptr), _marker: PhantomData } }
+    }
+","pub const fn new(ptr: *mut T) -> Option<Self> {
+        if let Some(pointer) = NonNull::new(ptr) {
+            Some(Unique { pointer, _marker: PhantomData })
+        } else {
+            None
+        }
+    }",Caller has to promise the pointer is non-null.,nullptr,exposed,

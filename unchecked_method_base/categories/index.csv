@@ -1,0 +1,252 @@
+Path,Library,Start_line,End_line,Unchecked Func,Checked Func,Safety Conditions,Safety Category,User visibility
+../../refs/rust/library/core/src/array/ascii.rs,[u8;N],39,44,"    pub const unsafe fn as_ascii_unchecked(&self) -> &[ascii::Char; N] {
+        let byte_ptr: *const [u8; N] = self;
+        let ascii_ptr = byte_ptr as *const [ascii::Char; N];
+        // SAFETY: The caller promised all the bytes are ASCII
+        unsafe { &*ascii_ptr }
+    }
+","
+pub const fn as_ascii(&self) -> Option<&[ascii::Char; N]> {
+        if self.is_ascii() {
+            // SAFETY: Just checked that it's ASCII
+            Some(unsafe { self.as_ascii_unchecked() })
+        } else {
+            None
+        }
+    }
+",Caller has to promise all the bytes in [u8] are ASCII.,index,exposed
+../../refs/rust/library/core/src/char/mod.rs,char,141,144,"pub const unsafe fn from_u32_unchecked(i: u32) -> char {
+    // SAFETY: the safety contract must be upheld by the caller.
+    unsafe { self::convert::from_u32_unchecked(i) }
+}
+","pub const fn from_u32(i: u32) -> Option<char> {
+    self::convert::from_u32(i)
+}",Caller has to promise the 'i' is a valid 'char' values.,index,exposed
+../../refs/rust/library/core/src/ptr/alignment.rs,ptr::Alignment,76,86,"    pub const unsafe fn new_unchecked(align: usize) -> Self {
+        assert_unsafe_precondition!(
+            check_language_ub,
+            ""Alignment::new_unchecked requires a power of two"",
+            (align: usize = align) => align.is_power_of_two()
+        );
+
+        // SAFETY: By precondition, this must be a power of two, and
+        // our variants encompass all possible powers of two.
+        unsafe { mem::transmute::<usize, Alignment>(align) }
+    }
+","
+pub const fn new(align: usize) -> Option<Self> {
+        if align.is_power_of_two() {
+            // SAFETY: Just checked it only has one bit set
+            Some(unsafe { Self::new_unchecked(align) })
+        } else {
+            None
+        }
+    }
+",Caller has to promise 'align' is a power of 2 and can not be zero.,index,exposed
+../../refs/rust/library/core/src/slice/ascii.rs,[u8],43,48,"    pub const unsafe fn as_ascii_unchecked(&self) -> &[ascii::Char] {
+        let byte_ptr: *const [u8] = self;
+        let ascii_ptr = byte_ptr as *const [ascii::Char];
+        // SAFETY: The caller promised all the bytes are ASCII
+        unsafe { &*ascii_ptr }
+    }
+","pub const fn as_ascii(&self) -> Option<&[ascii::Char]> {
+        if self.is_ascii() {
+            // SAFETY: Just checked that it's ASCII
+            Some(unsafe { self.as_ascii_unchecked() })
+        } else {
+            None
+        }
+    }",Caller has to promise all the bytes in [u8] are ASCII.,index,exposed
+../../refs/rust/library/core/src/slice/mod.rs,[T],958,974,"    pub const unsafe fn swap_unchecked(&mut self, a: usize, b: usize) {
+        assert_unsafe_precondition!(
+            check_library_ub,
+            ""slice::swap_unchecked requires that the indices are within the slice"",
+            (
+                len: usize = self.len(),
+                a: usize = a,
+                b: usize = b,
+            ) => a < len && b < len,
+        );
+
+        let ptr = self.as_mut_ptr();
+        // SAFETY: caller has to guarantee that `a < self.len()` and `b < self.len()`
+        unsafe {
+            ptr::swap(ptr.add(a), ptr.add(b));
+        }
+    }
+","
+pub const fn swap(&mut self, a: usize, b: usize) {
+        // FIXME: use swap_unchecked here (https://github.com/rust-lang/rust/pull/88540#issuecomment-944344343)
+        // Can't take two mutable loans from one vector, so instead use raw pointers.
+        let pa = &raw mut self[a];
+        let pb = &raw mut self[b];
+        // SAFETY: `pa` and `pb` have been created from safe mutable references and refer
+        // to elements in the slice and therefore are guaranteed to be valid and aligned.
+        // Note that accessing the elements behind `a` and `b` is checked and will
+        // panic when out of bounds.
+        unsafe {
+            ptr::swap(pa, pb);
+        }
+    }
+",Caller has to promise the two inputs are both less than self.len().,index,exposed
+../../refs/rust/library/core/src/slice/mod.rs,[T],1999,2015,"    pub const unsafe fn split_at_unchecked(&self, mid: usize) -> (&[T], &[T]) {
+        // FIXME(const-hack): the const function `from_raw_parts` is used to make this
+        // function const; previously the implementation used
+        // `(self.get_unchecked(..mid), self.get_unchecked(mid..))`
+
+        let len = self.len();
+        let ptr = self.as_ptr();
+
+        assert_unsafe_precondition!(
+            check_library_ub,
+            ""slice::split_at_unchecked requires the index to be within the slice"",
+            (mid: usize = mid, len: usize = len) => mid <= len,
+        );
+
+        // SAFETY: Caller has to check that `0 <= mid <= self.len()`
+        unsafe { (from_raw_parts(ptr, mid), from_raw_parts(ptr.add(mid), unchecked_sub(len, mid))) }
+    }
+","pub const fn split_at_checked(&self, mid: usize) -> Option<(&[T], &[T])> {
+        if mid <= self.len() {
+            // SAFETY: `[ptr; mid]` and `[mid; len]` are inside `self`, which
+            // fulfills the requirements of `split_at_unchecked`.
+            Some(unsafe { self.split_at_unchecked(mid) })
+        } else {
+            None
+        }
+    }
+
+or
+
+split_at()",Caller has to promise the mid is between 0 and self.len().,index,exposed
+../../refs/rust/library/core/src/slice/mod.rs,[T],2052,2072,"    pub const unsafe fn split_at_mut_unchecked(&mut self, mid: usize) -> (&mut [T], &mut [T]) {
+        let len = self.len();
+        let ptr = self.as_mut_ptr();
+
+        assert_unsafe_precondition!(
+            check_library_ub,
+            ""slice::split_at_mut_unchecked requires the index to be within the slice"",
+            (mid: usize = mid, len: usize = len) => mid <= len,
+        );
+
+        // SAFETY: Caller has to check that `0 <= mid <= self.len()`.
+        //
+        // `[ptr; mid]` and `[mid; len]` are not overlapping, so returning a mutable reference
+        // is fine.
+        unsafe {
+            (
+                from_raw_parts_mut(ptr, mid),
+                from_raw_parts_mut(ptr.add(mid), unchecked_sub(len, mid)),
+            )
+        }
+    }
+","pub const fn split_at_mut_checked(&mut self, mid: usize) -> Option<(&mut [T], &mut [T])> {
+        if mid <= self.len() {
+            // SAFETY: `[ptr; mid]` and `[mid; len]` are inside `self`, which
+            // fulfills the requirements of `split_at_unchecked`.
+            Some(unsafe { self.split_at_mut_unchecked(mid) })
+        } else {
+            None
+        }
+    }
+
+
+or 
+
+
+split_at_mut()",Caller has to promise the mid is between 0 and self.len().,index,exposed
+../../refs/rust/library/core/src/slice/mod.rs,[T],655,0,"pub unsafe fn get_unchecked<I>(&self, index: I) -> &I::Output
+    where
+        I: SliceIndex<Self>,
+    {
+        // SAFETY: the caller must uphold most of the safety requirements for `get_unchecked`;
+        // the slice is dereferenceable because `self` is a safe reference.
+        // The returned pointer is safe because impls of `SliceIndex` have to guarantee that it is.
+        unsafe { &*index.get_unchecked(self) }
+    }","pub fn get<I>(&self, index: I) -> Option<&I::Output>
+    where
+        I: SliceIndex<Self>,
+    {
+        index.get(self)
+    }",Caller has to promise the index is in-range.,index,exposed
+../../refs/rust/library/core/src/slice/mod.rs,[T],697,0,"pub unsafe fn get_unchecked_mut<I>(&mut self, index: I) -> &mut I::Output
+    where
+        I: SliceIndex<Self>,
+    {
+        // SAFETY: the caller must uphold the safety requirements for `get_unchecked_mut`;
+        // the slice is dereferenceable because `self` is a safe reference.
+        // The returned pointer is safe because impls of `SliceIndex` have to guarantee that it is.
+        unsafe { &mut *index.get_unchecked_mut(self) }
+    }","pub fn get_mut<I>(&mut self, index: I) -> Option<&mut I::Output>
+    where
+        I: SliceIndex<Self>,
+    {
+        index.get_mut(self)
+    }",Caller has to promise the index is in-range.,index,exposed
+../../refs/rust/library/core/src/str/mod.rs,[T]+SliceIndex,654,659,"    pub unsafe fn get_unchecked<I: SliceIndex<str>>(&self, i: I) -> &I::Output {
+        // SAFETY: the caller must uphold the safety contract for `get_unchecked`;
+        // the slice is dereferenceable because `self` is a safe reference.
+        // The returned pointer is safe because impls of `SliceIndex` have to guarantee that it is.
+        unsafe { &*i.get_unchecked(self) }
+    }
+","pub fn get<I: SliceIndex<str>>(&self, i: I) -> Option<&I::Output> {
+        i.get(self)
+    }","The starting index must not exceed the ending index;
+Indexes must be within bounds of the original slice;
+Indexes must lie on UTF-8 sequence boundaries.",index,exposed
+../../refs/rust/library/core/src/str/mod.rs,[T]+SliceIndex,689,694,"    pub unsafe fn get_unchecked_mut<I: SliceIndex<str>>(&mut self, i: I) -> &mut I::Output {
+        // SAFETY: the caller must uphold the safety contract for `get_unchecked_mut`;
+        // the slice is dereferenceable because `self` is a safe reference.
+        // The returned pointer is safe because impls of `SliceIndex` have to guarantee that it is.
+        unsafe { &mut *i.get_unchecked_mut(self) }
+    }
+","pub fn get_mut<I: SliceIndex<str>>(&mut self, i: I) -> Option<&mut I::Output> {
+        i.get_mut(self)
+    }","The starting index must not exceed the ending index;
+Indexes must be within bounds of the original slice;
+Indexes must lie on UTF-8 sequence boundaries.",index,exposed
+../../refs/rust/library/portable-simd/crates/core_simd/src/masks.rs,"std::simd::Mask<T,N>",233,236,"    pub unsafe fn test_unchecked(&self, index: usize) -> bool {
+        // Safety: the caller must confirm this invariant
+        unsafe { self.0.test_unchecked(index) }
+    }
+","pub fn test(&self, index: usize) -> bool {
+        assert!(index < N, ""element index out of range"");
+        // Safety: the element index has been checked
+        unsafe { self.test_unchecked(index) }
+    }",Caller has to promise index is less than self.len().,index,exposed
+../../refs/rust/library/portable-simd/crates/core_simd/src/masks.rs,"std::simd::Mask<T,N>",256,261,"    pub unsafe fn set_unchecked(&mut self, index: usize, value: bool) {
+        // Safety: the caller must confirm this invariant
+        unsafe {
+            self.0.set_unchecked(index, value);
+        }
+    }
+","pub fn set(&mut self, index: usize, value: bool) {
+        assert!(index < N, ""element index out of range"");
+        // Safety: the element index has been checked
+        unsafe {
+            self.set_unchecked(index, value);
+        }
+    }",Caller has to promise index is less than self.len().,index,exposed
+../../refs/rust/library/core/src/alloc/layout.rs,std::alloc::Layout,129,141,"    pub const unsafe fn from_size_align_unchecked(size: usize, align: usize) -> Self {
+        assert_unsafe_precondition!(
+            check_library_ub,
+            ""Layout::from_size_align_unchecked requires that align is a power of 2 \
+            and the rounded-up allocation size does not exceed isize::MAX"",
+            (
+                size: usize = size,
+                align: usize = align,
+            ) => Layout::is_size_align_valid(size, align)
+        );
+        // SAFETY: the caller is required to uphold the preconditions.
+        unsafe { Layout { size, align: mem::transmute(align) } }
+    }
+","
+pub const fn from_size_align(size: usize, align: usize) -> Result<Self, LayoutError> {
+        if Layout::is_size_align_valid(size, align) {
+            // SAFETY: Layout::is_size_align_valid checks the preconditions for this call.
+            unsafe { Ok(Layout { size, align: mem::transmute(align) }) }
+        } else {
+            Err(LayoutError)
+        }
+    }
+",Caller has to promise the 'align' is a power of 2 and the 'size' does not exceed MAX.,index,exposed

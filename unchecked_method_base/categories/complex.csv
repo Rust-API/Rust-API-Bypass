@@ -1,0 +1,407 @@
+Path,Library,Start_line,End_line,Unchecked Func,Checked Func,Safety Conditions,Safety Condition Category,User visible,Flag
+../../refs/rust/library/alloc/src/collections/btree/map.rs,CursorMutKey,3191,3218,"    pub unsafe fn insert_after_unchecked(&mut self, key: K, value: V) {
+        let edge = match self.current.take() {
+            None => {
+                // Tree is empty, allocate a new root.
+                // SAFETY: We have no other reference to the tree.
+                let root = unsafe { self.root.reborrow() };
+                debug_assert!(root.is_none());
+                let mut node = NodeRef::new_leaf(self.alloc.clone());
+                // SAFETY: We don't touch the root while the handle is alive.
+                let handle = unsafe { node.borrow_mut().push_with_handle(key, value) };
+                *root = Some(node.forget_type());
+                *self.length += 1;
+                self.current = Some(handle.left_edge());
+                return;
+            }
+            Some(current) => current,
+        };
+
+        let handle = edge.insert_recursing(key, value, self.alloc.clone(), |ins| {
+            drop(ins.left);
+            // SAFETY: The handle to the newly inserted value is always on a
+            // leaf node, so adding a new root node doesn't invalidate it.
+            let root = unsafe { self.root.reborrow().as_mut().unwrap() };
+            root.push_internal_level(self.alloc.clone()).push(ins.kv.0, ins.kv.1, ins.right)
+        });
+        self.current = Some(handle.left_edge());
+        *self.length += 1;
+    }
+","pub fn insert_after(&mut self, key: K, value: V) -> Result<(), UnorderedKeyError> {
+        if let Some((prev, _)) = self.peek_prev() {
+            if &key <= prev {
+                return Err(UnorderedKeyError {});
+            }
+        }
+        if let Some((next, _)) = self.peek_next() {
+            if &key >= next {
+                return Err(UnorderedKeyError {});
+            }
+        }
+        unsafe {
+            self.insert_after_unchecked(key, value);
+        }
+        Ok(())
+    }","必须保证BTreeMap不变量被包含
+新插入的元素必须得是书中独特的元素
+树中所有的键必须以排序顺序保存",BTreeMap,,
+../../refs/rust/library/alloc/src/collections/btree/map.rs,CursorMutKey,3234,3264,"    pub unsafe fn insert_before_unchecked(&mut self, key: K, value: V) {
+        let edge = match self.current.take() {
+            None => {
+                // SAFETY: We have no other reference to the tree.
+                match unsafe { self.root.reborrow() } {
+                    root @ None => {
+                        // Tree is empty, allocate a new root.
+                        let mut node = NodeRef::new_leaf(self.alloc.clone());
+                        // SAFETY: We don't touch the root while the handle is alive.
+                        let handle = unsafe { node.borrow_mut().push_with_handle(key, value) };
+                        *root = Some(node.forget_type());
+                        *self.length += 1;
+                        self.current = Some(handle.right_edge());
+                        return;
+                    }
+                    Some(root) => root.borrow_mut().last_leaf_edge(),
+                }
+            }
+            Some(current) => current,
+        };
+
+        let handle = edge.insert_recursing(key, value, self.alloc.clone(), |ins| {
+            drop(ins.left);
+            // SAFETY: The handle to the newly inserted value is always on a
+            // leaf node, so adding a new root node doesn't invalidate it.
+            let root = unsafe { self.root.reborrow().as_mut().unwrap() };
+            root.push_internal_level(self.alloc.clone()).push(ins.kv.0, ins.kv.1, ins.right)
+        });
+        self.current = Some(handle.right_edge());
+        *self.length += 1;
+    }
+","pub fn insert_before(&mut self, key: K, value: V) -> Result<(), UnorderedKeyError> {
+        if let Some((prev, _)) = self.peek_prev() {
+            if &key <= prev {
+                return Err(UnorderedKeyError {});
+            }
+        }
+        if let Some((next, _)) = self.peek_next() {
+            if &key >= next {
+                return Err(UnorderedKeyError {});
+            }
+        }
+        unsafe {
+            self.insert_before_unchecked(key, value);
+        }
+        Ok(())
+    }","必须保证BTreeMap不变量被包含
+新插入的元素必须得是书中独特的元素
+树中所有的键必须以排序顺序保存",BTreeMap,,
+../../refs/rust/library/alloc/src/collections/btree/map.rs,CursorMut,3396,3398,"    pub unsafe fn insert_after_unchecked(&mut self, key: K, value: V) {
+        unsafe { self.inner.insert_after_unchecked(key, value) }
+    }
+","    pub fn insert_after(&mut self, key: K, value: V) -> Result<(), UnorderedKeyError> {
+        self.inner.insert_after(key, value)
+    }",,BTreeMap,,
+../../refs/rust/library/alloc/src/collections/btree/map.rs,btreeMap,3414,3416,"    pub unsafe fn insert_before_unchecked(&mut self, key: K, value: V) {
+        unsafe { self.inner.insert_before_unchecked(key, value) }
+    }
+","pub fn insert_before(&mut self, key: K, value: V) -> Result<(), UnorderedKeyError> {
+        self.inner.insert_before(key, value)
+    }",,BTreeMap,,
+../../refs/rust/library/alloc/src/collections/btree/set.rs,CursoeMut,2353,2355,"    pub unsafe fn insert_after_unchecked(&mut self, value: T) {
+        unsafe { self.inner.insert_after_unchecked(value, SetValZST) }
+    }
+","pub fn insert_after(&mut self, value: T) -> Result<(), UnorderedKeyError> {
+        self.inner.insert_after(value, SetValZST)
+    }",BTreeSet不变量必须被保持,BTreeMap,,
+../../refs/rust/library/alloc/src/collections/btree/set.rs,null,2371,2373,"    pub unsafe fn insert_before_unchecked(&mut self, value: T) {
+        unsafe { self.inner.insert_before_unchecked(value, SetValZST) }
+    }
+",同上,同上,BTreeMap,,
+../../refs/rust/library/alloc/src/collections/btree/set.rs,null,2439,2441,"    pub unsafe fn insert_after_unchecked(&mut self, value: T) {
+        unsafe { self.inner.insert_after_unchecked(value, SetValZST) }
+    }
+",同上,同上,BTreeMap,,
+../../refs/rust/library/alloc/src/collections/btree/set.rs,null,2457,2459,"    pub unsafe fn insert_before_unchecked(&mut self, value: T) {
+        unsafe { self.inner.insert_before_unchecked(value, SetValZST) }
+    }
+",同上,同上,BTreeMap,,
+../../refs/rust/library/alloc/src/rc.rs,"Rc<T:?Sized, A:Allocator>",1811,1815,"    pub unsafe fn get_mut_unchecked(this: &mut Self) -> &mut T {
+        // We are careful to *not* create a reference covering the ""count"" fields, as
+        // this would conflict with accesses to the reference counts (e.g. by `Weak`).
+        unsafe { &mut (*this.ptr.as_ptr()).value }
+    }
+","pub fn get_mut(this: &mut Self) -> Option<&mut T> {
+        if Rc::is_unique(this) { unsafe { Some(Rc::get_mut_unchecked(this)) } } else { None }
+    }","/// If any other `Rc` or [`Weak`] pointers to the same allocation exist, then
+    /// they must not be dereferenced or have active borrows for the duration
+    /// of the returned borrow, and their inner type must be exactly the same as the
+    /// inner type of this Rc (including lifetimes). This is trivially the case if no
+    /// such pointers exist, for example immediately after `Rc::new`.",complex,exposed,
+../../refs/rust/library/alloc/src/sync.rs,"Arc<T:?Sized,A:Allocator>",2523,2527,"    pub unsafe fn get_mut_unchecked(this: &mut Self) -> &mut T {
+        // We are careful to *not* create a reference covering the ""count"" fields, as
+        // this would alias with concurrent access to the reference counts (e.g. by `Weak`).
+        unsafe { &mut (*this.ptr.as_ptr()).data }
+    }
+","pub fn get_mut(this: &mut Self) -> Option<&mut T> {
+        if this.is_unique() {
+            // This unsafety is ok because we're guaranteed that the pointer
+            // returned is the *only* pointer that will ever be returned to T. Our
+            // reference count is guaranteed to be 1 at this point, and we required
+            // the Arc itself to be `mut`, so we're returning the only possible
+            // reference to the inner data.
+            unsafe { Some(Arc::get_mut_unchecked(this)) }
+        } else {
+            None
+        }
+    }","/// If any other `Arc` or [`Weak`] pointers to the same allocation exist, then
+    /// they must not be dereferenced or have active borrows for the duration
+    /// of the returned borrow, and their inner type must be exactly the same as the
+    /// inner type of this Rc (including lifetimes). This is trivially the case if no
+    /// such pointers exist, for example immediately after `Arc::new`.",complex,exposed,
+../../refs/rust/library/core/src/array/iter.rs,"IntoIter<T,N>",139,146,"
+pub const unsafe fn new_unchecked(
+        buffer: [MaybeUninit<T>; N],
+        initialized: Range<usize>,
+    ) -> Self {
+        // SAFETY: one of our safety conditions is that the range is canonical.
+        let alive = unsafe { IndexRange::new_unchecked(initialized.start, initialized.end) };
+        Self { data: buffer, alive }
+    }
+",无直接对应安全函数,需要确定参数的范围是规范的,complex,,
+../../refs/rust/library/core/src/cell.rs,UnsafeCell<T:?Sized>,2284,2287,"    pub const unsafe fn as_ref_unchecked(&self) -> &T {
+        // SAFETY: pointer comes from `&self` so naturally satisfies ptr-to-ref invariants.
+        unsafe { self.get().as_ref_unchecked() }
+    }
+","无直接对应的unsafe版本, 与RefCell有关",null,complex,,
+../../refs/rust/library/core/src/cell.rs,UnsafeCell<T:?Sized>,2312,2315,"    pub const unsafe fn as_mut_unchecked(&self) -> &mut T {
+        // SAFETY: pointer comes from `&self` so naturally satisfies ptr-to-ref invariants.
+        unsafe { self.get().as_mut_unchecked() }
+    }
+","无直接对应的unsafe版本, 与RefMut有关",null,complex,,
+../../refs/rust/library/core/src/io/borrowed_buf.rs,BorrowedCursor<'a>,302,306,"    pub unsafe fn advance_unchecked(&mut self, n: usize) -> &mut Self {
+        self.buf.filled += n;
+        self.buf.init = cmp::max(self.buf.init, self.buf.filled);
+        self
+    }
+","pub fn advance(&mut self, n: usize) -> &mut Self {
+        let filled = self.buf.filled.strict_add(n);
+        assert!(filled <= self.buf.init);
+
+        self.buf.filled = filled;
+        self
+    }","如果没有n个初始化, 则panic",complex,,
+../../refs/rust/library/core/src/num/uint_macros.rs,num,1265,1277,"        pub const unsafe fn unchecked_disjoint_bitor(self, other: Self) -> Self {
+            assert_unsafe_precondition!(
+                check_language_ub,
+                concat!(stringify!($SelfT), ""::unchecked_disjoint_bitor cannot have overlapping bits""),
+                (
+                    lhs: $SelfT = self,
+                    rhs: $SelfT = other,
+                ) => (lhs & rhs) == 0,
+            );
+
+            // SAFETY: Same precondition
+            unsafe { intrinsics::disjoint_bitor(self, other) }
+        }
+",self | other,The caller has to promise self & other == 0,complex,exposed,
+../../refs/rust/library/core/src/pin.rs,"Pin<&;a, T:?Sized>",1532,1543," pub unsafe fn map_unchecked<U, F>(self, func: F) -> Pin<&'a U>
+    where
+        U: ?Sized,
+        F: FnOnce(&T) -> &U,
+    {
+        let pointer = &*self.__pointer;
+        let new_pointer = func(pointer);
+
+        // SAFETY: the safety contract for `new_unchecked` must be
+        // upheld by the caller.
+        unsafe { Pin::new_unchecked(new_pointer) }
+    }",Not found,The caller has to promise the data will not move.,pin,exposed,
+../../refs/rust/library/core/src/pin.rs,"Pin<&;a, T:?Sized>",1636,0,"pub unsafe fn map_unchecked_mut<U, F>(self, func: F) -> Pin<&'a mut U>
+    where
+        U: ?Sized,
+        F: FnOnce(&mut T) -> &mut U,
+    {
+        // SAFETY: the caller is responsible for not moving the
+        // value out of this reference.
+        let pointer = unsafe { Pin::get_unchecked_mut(self) };
+        let new_pointer = func(pointer);
+        // SAFETY: as the value of `this` is guaranteed to not have
+        // been moved out, this call to `new_unchecked` is safe.
+        unsafe { Pin::new_unchecked(new_pointer) }
+    }",Not found,The caller has to promise the data will not move.,pin,exposed,
+../../refs/rust/library/core/src/pin.rs,"Pin<&;a, T:?Sized>",1357,1359,"    pub const unsafe fn new_unchecked(pointer: Ptr) -> Pin<Ptr> {
+        Pin { __pointer: pointer }
+    }
+","
+    pub const fn new(pointer: Ptr) -> Pin<Ptr> {
+        // SAFETY: the value pointed to is `Unpin`, and so has no requirements
+        // around pinning.
+        unsafe { Pin::new_unchecked(pointer) }
+    }
+",None,pin,exposed,
+../../refs/rust/library/core/src/pin.rs,"Pin<&;a, T:?Sized>",1510,1512,"    pub const unsafe fn into_inner_unchecked(pin: Pin<Ptr>) -> Ptr {
+        pin.__pointer
+    }
+","
+ pub const fn into_inner(pin: Pin<Ptr>) -> Ptr {
+        pin.__pointer
+    }
+",None,pin,exposed,
+../../refs/rust/library/core/src/pin.rs,"Pin<&;a, T:?Sized>",1615,1617,"    pub const unsafe fn get_unchecked_mut(self) -> &'a mut T {
+        self.__pointer
+    }
+","
+pub const fn get_mut(self) -> &'a mut T
+    where
+        T: Unpin,
+    {
+        self.__pointer
+    }
+","/// This function is unsafe. You must guarantee that you will never move
+/// the data out of the mutable reference you receive when you call this
+/// function, so that the invariants on the `Pin` type can be upheld.",pin,exposed,
+../../refs/rust/library/core/src/ptr/const_ptr.rs,*const [T],1576,0,"pub unsafe fn get_unchecked<I>(self, index: I) -> *const I::Output
+    where
+        I: SliceIndex<[T]>,
+    {
+        // SAFETY: the caller ensures that `self` is dereferenceable and `index` in-bounds.
+        unsafe { index.get_unchecked(self) }
+    }",Not found,The caller has to promise the self is dereferenceable and index is  in-bounds.,complex/nullptr/index,exposed,
+../../refs/rust/library/core/src/ptr/mut_ptr.rs,*mut [T],1876,1886,"    pub unsafe fn split_at_mut_unchecked(self, mid: usize) -> (*mut [T], *mut [T]) {
+        let len = self.len();
+        let ptr = self.as_mut_ptr();
+
+        // SAFETY: Caller must pass a valid pointer and an index that is in-bounds.
+        let tail = unsafe { ptr.add(mid) };
+        (
+            crate::ptr::slice_from_raw_parts_mut(ptr, mid),
+            crate::ptr::slice_from_raw_parts_mut(tail, len - mid),
+        )
+    }
+","pub unsafe fn split_at_mut(self, mid: usize) -> (*mut [T], *mut [T]) {
+        assert!(mid <= self.len());
+        // SAFETY: The assert above is only a safety-net as long as `self.len()` is correct
+        // The actual safety requirements of this function are the same as for `split_at_mut_unchecked`
+        unsafe { self.split_at_mut_unchecked(mid) }
+    }",The caller has to promise the self is dereferenceable and index is  in-bounds.,complex/nullptr/index,exposed,
+../../refs/rust/library/core/src/ptr/mut_ptr.rs,*mut [T],1929,0,"pub unsafe fn get_unchecked_mut<I>(self, index: I) -> *mut I::Output
+    where
+        I: SliceIndex<[T]>,
+    {
+        // SAFETY: the caller ensures that `self` is dereferenceable and `index` in-bounds.
+        unsafe { index.get_unchecked_mut(self) }
+    }",Not found,The caller has to promise the self is dereferenceable and index is  in-bounds.,complex/nullptr/index,exposed,
+../../refs/rust/library/core/src/ptr/non_null.rs,NonNull<[T]>,1564,0,"pub unsafe fn get_unchecked_mut<I>(self, index: I) -> NonNull<I::Output>
+    where
+        I: SliceIndex<[T]>,
+    {
+        // SAFETY: the caller ensures that `self` is dereferenceable and `index` in-bounds.
+        // As a consequence, the resulting pointer cannot be null.
+        unsafe { NonNull::new_unchecked(self.as_ptr().get_unchecked_mut(index)) }
+    }",Not found,The caller has to promise the self is dereferenceable and index is  in-bounds.,complex/nullptr/index,exposed,
+../../refs/rust/library/core/src/slice/mod.rs,[T],4580,0,"pub unsafe fn get_disjoint_unchecked_mut<I, const N: usize>(
+        &mut self,
+        indices: [I; N],
+    ) -> [&mut I::Output; N]
+    where
+        I: GetDisjointMutIndex + SliceIndex<Self>,
+    {
+        // NB: This implementation is written as it is because any variation of
+        // `indices.map(|i| self.get_unchecked_mut(i))` would make miri unhappy,
+        // or generate worse code otherwise. This is also why we need to go
+        // through a raw pointer here.
+        let slice: *mut [T] = self;
+        let mut arr: mem::MaybeUninit<[&mut I::Output; N]> = mem::MaybeUninit::uninit();
+        let arr_ptr = arr.as_mut_ptr();
+
+        // SAFETY: We expect `indices` to contain disjunct values that are
+        // in bounds of `self`.
+        unsafe {
+            for i in 0..N {
+                let idx = indices.get_unchecked(i).clone();
+                arr_ptr.cast::<&mut I::Output>().add(i).write(&mut *slice.get_unchecked_mut(idx));
+            }
+            arr.assume_init()
+        }
+    }","pub fn get_disjoint_mut<I, const N: usize>(
+        &mut self,
+        indices: [I; N],
+    ) -> Result<[&mut I::Output; N], GetDisjointMutError>
+    where
+        I: GetDisjointMutIndex + SliceIndex<Self>,
+    {
+        get_disjoint_check_valid(&indices, self.len())?;
+        // SAFETY: The `get_disjoint_check_valid()` call checked that all indices
+        // are disjunct and in bounds.
+        unsafe { Ok(self.get_disjoint_unchecked_mut(indices)) }
+    }",The caller has to promise the indices is non-overlapping and not OOB.,complex/index,exposed,
+../../refs/rust/library/core/src/str/mod.rs,str,740,745,"    pub unsafe fn slice_unchecked(&self, begin: usize, end: usize) -> &str {
+        // SAFETY: the caller must uphold the safety contract for `get_unchecked`;
+        // the slice is dereferenceable because `self` is a safe reference.
+        // The returned pointer is safe because impls of `SliceIndex` have to guarantee that it is.
+        unsafe { &*(begin..end).get_unchecked(self) }
+    }
+",Not found,The caller has to promise the self is dereferenceable and index is  in-bounds.,complex,exposed,
+../../refs/rust/library/core/src/str/mod.rs,str,774,779,"    pub unsafe fn slice_mut_unchecked(&mut self, begin: usize, end: usize) -> &mut str {
+        // SAFETY: the caller must uphold the safety contract for `get_unchecked_mut`;
+        // the slice is dereferenceable because `self` is a safe reference.
+        // The returned pointer is safe because impls of `SliceIndex` have to guarantee that it is.
+        unsafe { &mut *(begin..end).get_unchecked_mut(self) }
+    }
+",Not found,The caller has to promise the self is dereferenceable and index is  in-bounds.,complex,exposed,
+../../refs/rust/library/portable-simd/crates/core_simd/src/masks.rs,"Mask<T,N>",190,196,"    pub unsafe fn from_int_unchecked(value: Simd<T, N>) -> Self {
+        // Safety: the caller must confirm this invariant
+        unsafe {
+            core::intrinsics::assume(<T as Sealed>::valid(value));
+            Self(mask_impl::Mask::from_int_unchecked(value))
+        }
+    }
+","pub fn from_int(value: Simd<T, N>) -> Self {
+        assert!(T::valid(value), ""all values must be either 0 or -1"",);
+        // Safety: the validity has been checked
+        unsafe { Self::from_int_unchecked(value) }
+    }",The caller has to promise all elements must be 0 or -1.,vector,exposed,
+../../refs/rust/library/std/src/collections/hash/map.rs,"HashMap<K,V,S>",1106,0,"pub unsafe fn get_disjoint_unchecked_mut<Q: ?Sized, const N: usize>(
+        &mut self,
+        ks: [&Q; N],
+    ) -> [Option<&'_ mut V>; N]
+    where
+        K: Borrow<Q>,
+        Q: Hash + Eq,
+    {
+        unsafe { self.base.get_many_unchecked_mut(ks) }
+    }","pub fn get_disjoint_mut<Q: ?Sized, const N: usize>(
+        &mut self,
+        ks: [&Q; N],
+    ) -> [Option<&'_ mut V>; N]
+    where
+        K: Borrow<Q>,
+        Q: Hash + Eq,
+    {
+        self.base.get_many_mut(ks)
+    }",The caller has to promise the keys do not overlap.,complex,exposed,
+../../refs/rust/library/std/src/ffi/os_str.rs,OsString,183,185,"    pub unsafe fn from_encoded_bytes_unchecked(bytes: Vec<u8>) -> Self {
+        OsString { inner: unsafe { Buf::from_encoded_bytes_unchecked(bytes) } }
+    }
+",Not found,"Each `word` only contains content that originated from `OsStr::as_encoded_bytes`
+Only split with ASCII whitespace which is a non-empty UTF-8 substring",complex/str,exposed,
+../../refs/rust/library/std/src/ffi/os_str.rs,OsStr,863,865,"    pub unsafe fn from_encoded_bytes_unchecked(bytes: &[u8]) -> &Self {
+        Self::from_inner(unsafe { Slice::from_encoded_bytes_unchecked(bytes) })
+    }
+",Not found,"Each `word` only contains content that originated from `OsStr::as_encoded_bytes`
+Only split with ASCII whitespace which is a non-empty UTF-8 substring",complex/str,exposed,
+../../refs/rust/library/std/src/thread/mod.rs,Builder/thread,461,0,"pub unsafe fn spawn_unchecked<F, T>(self, f: F) -> io::Result<JoinHandle<T>>
+    where
+        F: FnOnce() -> T,
+        F: Send,
+        T: Send,
+    {
+        Ok(JoinHandle(unsafe { self.spawn_unchecked_(f, None) }?))
+    }","pub fn spawn<F, T>(f: F) -> JoinHandle<T>
+where
+    F: FnOnce() -> T,
+    F: Send + 'static,
+    T: Send + 'static,
+{
+    Builder::new().spawn(f).expect(""failed to spawn thread"")
+}","The caller has to ensure that the spawned thread does not outlive any
+references in the supplied thread closure and its return type.",thread,exposed,

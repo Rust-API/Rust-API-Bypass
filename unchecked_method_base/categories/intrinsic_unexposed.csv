@@ -1,0 +1,223 @@
+Path,Library,Start_line,End_line,Unchecked Func,Checked Func,Safety Conditions,Safety Condition Category,User visibility
+../../refs/rust/library/std/src/sys_common/wtf8.rs,uniode/char,202,204,"    pub unsafe fn from_bytes_unchecked(value: Vec<u8>) -> Wtf8Buf {
+        Wtf8Buf { bytes: value, is_known_utf8: false }
+    }
+",未找到对应的safe,null,complex,unexposed
+../../refs/rust/library/std/src/sys_common/wtf8.rs,unicode/char,626,629,"    pub unsafe fn from_bytes_unchecked(value: &[u8]) -> &Wtf8 {
+        // SAFETY: start with &[u8], end with fancy &[u8]
+        unsafe { &*(value as *const [u8] as *const Wtf8) }
+    }
+",未找到对应的safe,null,complex,unexposed
+../../refs/rust/library/std/src/sys_common/wtf8.rs,unicode/char,967,974,"pub unsafe fn slice_unchecked(s: &Wtf8, begin: usize, end: usize) -> &Wtf8 {
+    // SAFETY: memory layout of a &[u8] and &Wtf8 are the same
+    unsafe {
+        let len = end - begin;
+        let start = s.as_bytes().as_ptr().add(begin);
+        Wtf8::from_bytes_unchecked(slice::from_raw_parts(start, len))
+    }
+}
+",未找到对应的safe,null,complex,unexposed
+../../refs/rust/library/core/src/ascii/ascii_char.rs,AsciiChar,469,472,"    pub const unsafe fn from_u8_unchecked(b: u8) -> Self {
+        // SAFETY: Our safety precondition is that `b` is in-range.
+        unsafe { transmute(b) }
+    }
+","pub const fn from_u8(b: u8) -> Option<Self> {
+        if b <= 127 {
+            // SAFETY: Just checked that `b` is in-range
+            Some(unsafe { Self::from_u8_unchecked(b) })
+        } else {
+            None
+        }
+    }",Caller has to promise the 'b' is in ASCII.,index,unexposed
+../../refs/rust/library/core/src/ascii/ascii_char.rs,AsciiChar,506,520,"    pub const unsafe fn digit_unchecked(d: u8) -> Self {
+        assert_unsafe_precondition!(
+            check_language_ub,
+            ""`ascii::Char::digit_unchecked` input cannot exceed 9."",
+            (d: u8 = d) => d < 10
+        );
+
+        // SAFETY: `'0'` through `'9'` are U+00030 through U+0039,
+        // so because `d` must be 64 or less the addition can return at most
+        // 112 (0x70), which doesn't overflow and is within the ASCII range.
+        unsafe {
+            let byte = b'0'.unchecked_add(d);
+            Self::from_u8_unchecked(byte)
+        }
+    }
+","pub const fn digit(d: u8) -> Option<Self> {
+        if d < 10 {
+            // SAFETY: Just checked it's in-range.
+            Some(unsafe { Self::digit_unchecked(d) })
+        } else {
+            None
+        }
+    }",Caller has to promise the 'd' in 0-9.,index,unexposed
+../../refs/rust/library/core/src/char/methods.rs,char,236,239,"    pub const unsafe fn from_u32_unchecked(i: u32) -> char {
+        // SAFETY: the safety contract must be upheld by the caller.
+        unsafe { super::convert::from_u32_unchecked(i) }
+    }
+","
+   pub const fn from_u32(i: u32) -> Option<char> {
+        super::convert::from_u32(i)
+    }
+",Caller has to promise the 'i' is a valid 'char' values.,index,unexposed
+../../refs/rust/library/std/src/sys_common/wtf8.rs,CodePoint,60,62,"    pub unsafe fn from_u32_unchecked(value: u32) -> CodePoint {
+        CodePoint { value }
+    }
+","pub fn from_u32(value: u32) -> Option<CodePoint> {
+        match value {
+            0..=0x10FFFF => Some(CodePoint { value }),
+            _ => None,
+        }
+    }",Caller has to promise value is less than or equal to 0x10FFFF.,index,unexposed
+../../refs/rust/library/core/src/hint.rs,core::hint,101,110,"pub const unsafe fn unreachable_unchecked() -> ! {
+    ub_checks::assert_unsafe_precondition!(
+        check_language_ub,
+        ""hint::unreachable_unchecked must never be reached"",
+        () => false
+    );
+    // SAFETY: the safety contract for `intrinsics::unreachable` must
+    // be upheld by the caller.
+    unsafe { intrinsics::unreachable() }
+}
+","pub const unsafe fn unreachable() -> !; ---> will UB
+ or
+unreachable!() ---> will panic","Rarely used, it's safe only when this code branch will never be reached. Otherwise, it will lead to UB.",intrinsic,unexposed
+../../refs/rust/library/core/src/hint.rs,core::hint,200,210,"pub const unsafe fn assert_unchecked(cond: bool) {
+    // SAFETY: The caller promised `cond` is true.
+    unsafe {
+        ub_checks::assert_unsafe_precondition!(
+            check_language_ub,
+            ""hint::assert_unchecked must never be called when the condition is false"",
+            (cond: bool = cond) => cond,
+        );
+        crate::intrinsics::assume(cond);
+    }
+}
+","pub const unsafe fn assume(b: bool) {
+    if !b {
+        // SAFETY: the caller must guarantee the argument is never `false`
+        unsafe { unreachable() }
+    }
+}
+or
+assert!()","Rarely used, it is equal to the cond is always true. 
+It invokes unreachable() inside and leads to UB if reached. ",intrinsic,unexposed
+../../refs/rust/library/core/src/intrinsics/mod.rs,core::intrinsic,1700,1700,"pub const unsafe fn transmute_unchecked<Src, Dst>(src: Src) -> Dst;","pub const unsafe fn transmute<Src, Dst>(src: Src) -> Dst;","Fundamentally unsafe, handle separately.",intrinsic,unexposed
+../../refs/rust/library/core/src/intrinsics/mod.rs,core::intrinsic,2802,2802,"pub const unsafe fn unchecked_div<T: Copy>(x: T, y: T) -> T;",No directly corresponding safe function,"Not used directly, see library/core/src/num for details",intrinsic,unexposed
+../../refs/rust/library/core/src/intrinsics/mod.rs,core::intrinsic,2812,2812,"pub const unsafe fn unchecked_rem<T: Copy>(x: T, y: T) -> T;",No directly corresponding safe function,"Not used directly, see library/core/src/num for details",intrinsic,unexposed
+../../refs/rust/library/core/src/intrinsics/mod.rs,core::intrinsic,2823,2823,"pub const unsafe fn unchecked_shl<T: Copy, U: Copy>(x: T, y: U) -> T;",No directly corresponding safe function,"Not used directly, see library/core/src/num for details",intrinsic,unexposed
+../../refs/rust/library/core/src/intrinsics/mod.rs,core::intrinsic,2833,2833,"pub const unsafe fn unchecked_shr<T: Copy, U: Copy>(x: T, y: U) -> T;",No directly corresponding safe function,"Not used directly, see library/core/src/num for details",intrinsic,unexposed
+../../refs/rust/library/core/src/intrinsics/mod.rs,core::intrinsic,2843,2843,"pub const unsafe fn unchecked_add<T: Copy>(x: T, y: T) -> T;",No directly corresponding safe function,"Not used directly, see library/core/src/num for details",intrinsic,unexposed
+../../refs/rust/library/core/src/intrinsics/mod.rs,core::intrinsic,2853,2853,"pub const unsafe fn unchecked_sub<T: Copy>(x: T, y: T) -> T;",No directly corresponding safe function,"Not used directly, see library/core/src/num for details",intrinsic,unexposed
+../../refs/rust/library/core/src/intrinsics/mod.rs,core::intrinsic,2863,2863,"pub const unsafe fn unchecked_mul<T: Copy>(x: T, y: T) -> T;",No directly corresponding safe function,"Not used directly, see library/core/src/num for details",intrinsic,unexposed
+../../refs/rust/library/std/src/sys/pal/itron/spin.rs,itron,87,91,"    pub unsafe fn get_unchecked(&self) -> (abi::ID, &T) {
+        (self.id.load(Ordering::Acquire) as abi::ID, unsafe {
+            (&*self.extra.get()).assume_init_ref()
+        })
+    }
+","pub fn get(&self) -> Option<(abi::ID, &T)> {
+        match self.id.load(Ordering::Acquire) {
+            ID_UNINIT => None,
+            id => Some((id as abi::ID, unsafe { (&*self.extra.get()).assume_init_ref() })),
+        }
+    }","RTOS的自旋锁相关, 暂不了解",itron,unexposed
+../../refs/rust/library/std/src/sys/pal/itron/spin.rs,itron,95,105,"    pub unsafe fn set_unchecked(&self, (id, extra): (abi::ID, T)) {
+        debug_assert!(self.get().is_none());
+
+        // Assumption: A positive `abi::ID` fits in `usize`.
+        debug_assert!(id >= 0);
+        debug_assert!(usize::try_from(id).is_ok());
+        let id = id as usize;
+
+        unsafe { *self.extra.get() = MaybeUninit::new(extra) };
+        self.id.store(id, Ordering::Release);
+    }
+",未找到相关safe,,itron,unexposed
+../../refs/rust/library/std/src/sys/sync/once_box.rs,sync,42,44,"    pub unsafe fn get_unchecked(&self) -> Pin<&T> {
+        unsafe { Pin::new_unchecked(&*self.ptr.load(Relaxed)) }
+    }
+","pub fn get_or_init(&self, f: impl FnOnce() -> Pin<Box<T>>) -> Pin<&T> {
+        let ptr = self.ptr.load(Acquire);
+        match unsafe { ptr.as_ref() } {
+            Some(val) => unsafe { Pin::new_unchecked(val) },
+            None => self.initialize(f),
+        }
+    }",,sync,unexposed
+../../refs/rust/library/core/src/intrinsics/mod.rs,intrinsic,2474,0,"pub unsafe fn float_to_int_unchecked<Float: Copy, Int: Copy>(value: Float) -> Int;",No directly corresponding safe function,"Not used directly, see library/core/num/fxx.rs for details.",type,unexposed
+../../refs/rust/library/std/src/sys/os_str/bytes.rs,Buf,108,110,"    pub unsafe fn from_encoded_bytes_unchecked(s: Vec<u8>) -> Self {
+        Self { inner: s }
+    }
+",Not found ,None,unexposed,unexposed
+../../refs/rust/library/std/src/sys/os_str/bytes.rs,Buf,243,245,"    pub unsafe fn from_encoded_bytes_unchecked(s: &[u8]) -> &Slice {
+        unsafe { mem::transmute(s) }
+    }
+",Not found ,None,unexposed,unexposed
+../../refs/rust/library/std/src/sys/os_str/wtf8.rs,Buf,85,87,"    pub unsafe fn from_encoded_bytes_unchecked(s: Vec<u8>) -> Self {
+        unsafe { Self { inner: Wtf8Buf::from_bytes_unchecked(s) } }
+    }
+",Not found ,None,unexposed,unexposed
+../../refs/rust/library/std/src/sys/os_str/wtf8.rs,Slice,222,224,"    pub unsafe fn from_encoded_bytes_unchecked(s: &[u8]) -> &Slice {
+        unsafe { mem::transmute(Wtf8::from_bytes_unchecked(s)) }
+    }
+",Not found ,None,unexposed,unexposed
+../../refs/rust/library/alloc/src/str.rs,str,617,619,"pub unsafe fn from_boxed_utf8_unchecked(v: Box<[u8]>) -> Box<str> {
+    unsafe { Box::from_raw(Box::into_raw(v) as *mut str) }
+}
+",Not found,None,unexposed,unexposed
+../../refs/rust/library/portable-simd/crates/core_simd/src/vector.rs,"Simd<T,N>",451,0," pub unsafe fn load_select_unchecked(
+        slice: &[T],
+        enable: Mask<<T as SimdElement>::Mask, N>,
+        or: Self,
+    ) -> Self {
+        let ptr = slice.as_ptr();
+        // SAFETY: The safety of reading elements from `slice` is ensured by the caller.
+        unsafe { Self::load_select_ptr(ptr, enable, or) }
+    }",Not found,,vector,unexposed
+../../refs/rust/library/portable-simd/crates/core_simd/src/vector.rs,"Simd<T,N>",581,0,"pub unsafe fn gather_select_unchecked(
+        slice: &[T],
+        enable: Mask<isize, N>,
+        idxs: Simd<usize, N>,
+        or: Self,
+    ) -> Self {
+        let base_ptr = Simd::<*const T, N>::splat(slice.as_ptr());
+        // Ferris forgive me, I have done pointer arithmetic here.
+        let ptrs = base_ptr.wrapping_add(idxs);
+        // Safety: The caller is responsible for determining the indices are okay to read
+        unsafe { Self::gather_select_ptr(ptrs, enable, or) }
+    }",Not found,,vector,unexposed
+../../refs/rust/library/portable-simd/crates/core_simd/src/vector.rs,"Simd<T,N>",705,0,"pub unsafe fn store_select_unchecked(
+        self,
+        slice: &mut [T],
+        enable: Mask<<T as SimdElement>::Mask, N>,
+    ) {
+        let ptr = slice.as_mut_ptr();
+        // SAFETY: The safety of writing elements in `slice` is ensured by the caller.
+        unsafe { self.store_select_ptr(ptr, enable) }
+    }",Not found,,vector,unexposed
+../../refs/rust/library/portable-simd/crates/core_simd/src/vector.rs,"Simd<T,N>",808,0,"pub unsafe fn scatter_select_unchecked(
+        self,
+        slice: &mut [T],
+        enable: Mask<isize, N>,
+        idxs: Simd<usize, N>,
+    ) {
+        // Safety: This block works with *mut T derived from &mut 'a [T],
+        // which means it is delicate in Rust's borrowing model, circa 2021:
+        // &mut 'a [T] asserts uniqueness, so deriving &'a [T] invalidates live *mut Ts!
+        // Even though this block is largely safe methods, it must be exactly this way
+        // to prevent invalidating the raw ptrs while they're live.
+        // Thus, entering this block requires all values to use being already ready:
+        // 0. idxs we want to write to, which are used to construct the mask.
+        // 1. enable, which depends on an initial &'a [T] and the idxs.
+        // 2. actual values to scatter (self).
+        // 3. &mut [T] which will become our base ptr.
+        unsafe {
+            // Now Entering ?? *mut T Zone
+            let base_ptr = Simd::<*mut T, N>::splat(slice.as_mut_ptr());
+            // Ferris forgive me, I have done pointer arithmetic here.
+            let ptrs = base_ptr.wrapping_add(idxs);
+            // The ptrs have been bounds-masked to prevent memory-unsafe writes insha'allah
+            self.scatter_select_ptr(ptrs, enable);
+            // Cleared ?? *mut T Zone
+        }
+    }",Not found,,vector,unexposed

@@ -1,0 +1,42 @@
+Path,Library,Start_line,End_line,Unchecked Func,Checked Func,Safety Conditions,Safety Condition Category,User visible,Flag
+../../refs/rust/library/core/src/result.rs,Result,1490,1496,"    pub unsafe fn unwrap_unchecked(self) -> T {
+        match self {
+            Ok(t) => t,
+            // SAFETY: the safety contract must be upheld by the caller.
+            Err(_) => unsafe { hint::unreachable_unchecked() },
+        }
+    }
+","unwrap()
+unwrap_default()
+unwrap_or()
+unwrap_or_else()",Caller has to promise the Result is not 'Err'.,Result/Option,exposed,
+../../refs/rust/library/core/src/result.rs,Result,1521,1527,"    pub unsafe fn unwrap_err_unchecked(self) -> E {
+        match self {
+            // SAFETY: the safety contract must be upheld by the caller.
+            Ok(_) => unsafe { hint::unreachable_unchecked() },
+            Err(e) => e,
+        }
+    }
+","pub fn unwrap_err(self) -> E
+    where
+        T: fmt::Debug,
+    {
+        match self {
+            Ok(t) => unwrap_failed(""called `Result::unwrap_err()` on an `Ok` value"", &t),
+            Err(e) => e,
+        }
+    }",Caller has to promise the Result is not 'Err'.,Result/Option,exposed,
+../../refs/rust/library/core/src/option.rs,Option,1083,1089,"    pub const unsafe fn unwrap_unchecked(self) -> T {
+        match self {
+            Some(val) => val,
+            // SAFETY: the safety contract must be upheld by the caller.
+            None => unsafe { hint::unreachable_unchecked() },
+        }
+    }
+","pub const fn unwrap(self) -> T {
+        match self {
+            Some(val) => val,
+            None => unwrap_failed(),
+        }
+    }
+",Caller has to promise the Option is not 'None'.,Reuslt/Option,exposed,

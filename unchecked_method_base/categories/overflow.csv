@@ -1,0 +1,315 @@
+Path,Library,Start_line,End_line,Unchecked Func,Checked Func,Safety Conditions,Safety Condition Category,User visible,Flag
+../../refs/rust/library/core/src/num/int_macros.rs,num,559,573,"        pub const unsafe fn unchecked_add(self, rhs: Self) -> Self {
+            assert_unsafe_precondition!(
+                check_language_ub,
+                concat!(stringify!($SelfT), ""::unchecked_add cannot overflow""),
+                (
+                    lhs: $SelfT = self,
+                    rhs: $SelfT = rhs,
+                ) => !lhs.overflowing_add(rhs).1,
+            );
+
+            // SAFETY: this is guaranteed to be safe by the caller.
+            unsafe {
+                intrinsics::unchecked_add(self, rhs)
+            }
+        }
+","pub const fn checked_add(self, rhs: Self) -> Option<Self> {
+            let (a, b) = self.overflowing_add(rhs);
+            if intrinsics::unlikely(b) { None } else { Some(a) }
+        }",The  caller has to promise there is no overflow.,overflow,exposed,
+../../refs/rust/library/core/src/num/nonzero.rs,nonzero,1089,1092,"            pub const unsafe fn unchecked_mul(self, other: Self) -> Self {
+                // SAFETY: The caller ensures there is no overflow.
+                unsafe { Self::new_unchecked(self.get().unchecked_mul(other.get())) }
+            }
+","pub const fn checked_mul(self, other: Self) -> Option<Self> {
+                if let Some(result) = self.get().checked_mul(other.get()) {
+                    // SAFETY:
+                    // - `checked_mul` returns `None` on overflow
+                    // - `self` and `other` are non-zero
+                    // - the only way to get zero from a multiplication without overflow is for one
+                    //   of the sides to be zero
+                    //
+                    // So the result cannot be zero.
+                    Some(unsafe { Self::new_unchecked(result) })
+                } else {
+                    None
+                }
+            }","The caller has to promise there is  no overflow.
+This is for both integer and unsigned integer.",overflow/nonzero,exposed,
+../../refs/rust/library/core/src/num/nonzero.rs,nonzero,1491,1494,"        pub const unsafe fn unchecked_add(self, other: $Int) -> Self {
+            // SAFETY: The caller ensures there is no overflow.
+            unsafe { Self::new_unchecked(self.get().unchecked_add(other)) }
+        }
+","pub const fn checked_add(self, other: $Int) -> Option<Self> {
+            if let Some(result) = self.get().checked_add(other) {
+                // SAFETY:
+                // - `checked_add` returns `None` on overflow
+                // - `self` is non-zero
+                // - the only way to get zero from an addition without overflow is for both
+                //   sides to be zero
+                //
+                // So the result cannot be zero.
+                Some(unsafe { Self::new_unchecked(result) })
+            } else {
+                None
+            }
+        }","The caller has to promise there is  no overflow.
+This is for only unsigned interger.",overflow/nonzero,exposed,
+../../refs/rust/library/core/src/num/f128.rs,f128,872,0,"pub unsafe fn to_int_unchecked<Int>(self) -> Int
+    where
+        Self: FloatToInt<Int>,
+    {
+        // SAFETY: the caller must uphold the safety contract for
+        // `FloatToInt::to_int_unchecked`.
+        unsafe { FloatToInt::<Int>::to_int_unchecked(self) }
+    }","Not found, maybe some common transmute function?","The caller has to promise the value not be NaN, infinite and be representable in the return type Int.",float,exposed,
+../../refs/rust/library/core/src/num/f16.rs,f16,858,0,"pub unsafe fn to_int_unchecked<Int>(self) -> Int
+    where
+        Self: FloatToInt<Int>,
+    {
+        // SAFETY: the caller must uphold the safety contract for
+        // `FloatToInt::to_int_unchecked`.
+        unsafe { FloatToInt::<Int>::to_int_unchecked(self) }
+    }","Not found, maybe some common transmute function?","The caller has to promise the value not be NaN, infinite and be representable in the return type Int.",float,exposed,
+../../refs/rust/library/core/src/num/f32.rs,f32,1062,0," pub unsafe fn to_int_unchecked<Int>(self) -> Int
+    where
+        Self: FloatToInt<Int>,
+    {
+        // SAFETY: the caller must uphold the safety contract for
+        // `FloatToInt::to_int_unchecked`.
+        unsafe { FloatToInt::<Int>::to_int_unchecked(self) }
+    }","Not found, maybe some common transmute function?","The caller has to promise the value not be NaN, infinite and be representable in the return type Int.",float,exposed,
+../../refs/rust/library/core/src/num/f64.rs,f64,1063,0,"pub unsafe fn to_int_unchecked<Int>(self) -> Int
+    where
+        Self: FloatToInt<Int>,
+    {
+        // SAFETY: the caller must uphold the safety contract for
+        // `FloatToInt::to_int_unchecked`.
+        unsafe { FloatToInt::<Int>::to_int_unchecked(self) }
+    }","Not found, maybe some common transmute function?","The caller has to promise the value not be NaN, infinite and be representable in the return type Int.",float,exposed,
+../../refs/rust/library/core/src/num/int_macros.rs,num,709,723,"        pub const unsafe fn unchecked_sub(self, rhs: Self) -> Self {
+            assert_unsafe_precondition!(
+                check_language_ub,
+                concat!(stringify!($SelfT), ""::unchecked_sub cannot overflow""),
+                (
+                    lhs: $SelfT = self,
+                    rhs: $SelfT = rhs,
+                ) => !lhs.overflowing_sub(rhs).1,
+            );
+
+            // SAFETY: this is guaranteed to be safe by the caller.
+            unsafe {
+                intrinsics::unchecked_sub(self, rhs)
+            }
+        }
+","pub const fn checked_sub(self, rhs: Self) -> Option<Self> {
+            let (a, b) = self.overflowing_sub(rhs);
+            if intrinsics::unlikely(b) { None } else { Some(a) }
+        }",The caller has to promise there is no overflow.,overflow/nonzero,exposed,
+../../refs/rust/library/core/src/num/int_macros.rs,num,859,873,"        pub const unsafe fn unchecked_mul(self, rhs: Self) -> Self {
+            assert_unsafe_precondition!(
+                check_language_ub,
+                concat!(stringify!($SelfT), ""::unchecked_mul cannot overflow""),
+                (
+                    lhs: $SelfT = self,
+                    rhs: $SelfT = rhs,
+                ) => !lhs.overflowing_mul(rhs).1,
+            );
+
+            // SAFETY: this is guaranteed to be safe by the caller.
+            unsafe {
+                intrinsics::unchecked_mul(self, rhs)
+            }
+        }
+","pub const fn checked_mul(self, rhs: Self) -> Option<Self> {
+            let (a, b) = self.overflowing_mul(rhs);
+            if intrinsics::unlikely(b) { None } else { Some(a) }
+        }",The caller has to promise there is no overflow.,overflow/nonzero,exposed,
+../../refs/rust/library/core/src/num/int_macros.rs,num,1203,1216,"        pub const unsafe fn unchecked_neg(self) -> Self {
+            assert_unsafe_precondition!(
+                check_language_ub,
+                concat!(stringify!($SelfT), ""::unchecked_neg cannot overflow""),
+                (
+                    lhs: $SelfT = self,
+                ) => !lhs.overflowing_neg().1,
+            );
+
+            // SAFETY: this is guaranteed to be safe by the caller.
+            unsafe {
+                intrinsics::unchecked_sub(0, self)
+            }
+        }
+","pub const fn checked_neg(self) -> Option<Self> {
+            let (a, b) = self.overflowing_neg();
+            if intrinsics::unlikely(b) { None } else { Some(a) }
+        }",The caller has to promise there is no overflow.,overflow/nonzero,exposed,
+../../refs/rust/library/core/src/num/int_macros.rs,num,1331,1344,"        pub const unsafe fn unchecked_shl(self, rhs: u32) -> Self {
+            assert_unsafe_precondition!(
+                check_language_ub,
+                concat!(stringify!($SelfT), ""::unchecked_shl cannot overflow""),
+                (
+                    rhs: u32 = rhs,
+                ) => rhs < <$ActualT>::BITS,
+            );
+
+            // SAFETY: this is guaranteed to be safe by the caller.
+            unsafe {
+                intrinsics::unchecked_shl(self, rhs)
+            }
+        }
+","pub const fn checked_shl(self, rhs: u32) -> Option<Self> {
+            // Not using overflowing_shl as that's a wrapping shift
+            if rhs < Self::BITS {
+                // SAFETY: just checked the RHS is in-range
+                Some(unsafe { self.unchecked_shl(rhs) })
+            } else {
+                None
+            }
+        }",The caller has to promise there is no overflow.,overflow/nonzero,exposed,
+../../refs/rust/library/core/src/num/int_macros.rs,num,1452,1465,"        pub const unsafe fn unchecked_shr(self, rhs: u32) -> Self {
+            assert_unsafe_precondition!(
+                check_language_ub,
+                concat!(stringify!($SelfT), ""::unchecked_shr cannot overflow""),
+                (
+                    rhs: u32 = rhs,
+                ) => rhs < <$ActualT>::BITS,
+            );
+
+            // SAFETY: this is guaranteed to be safe by the caller.
+            unsafe {
+                intrinsics::unchecked_shr(self, rhs)
+            }
+        }
+","pub const fn checked_shr(self, rhs: u32) -> Option<Self> {
+            // Not using overflowing_shr as that's a wrapping shift
+            if rhs < Self::BITS {
+                // SAFETY: just checked the RHS is in-range
+                Some(unsafe { self.unchecked_shr(rhs) })
+            } else {
+                None
+            }
+        }",The caller has to promise there is no overflow.,overflow/nonzero,exposed,
+../../refs/rust/library/core/src/num/uint_macros.rs,num,605,619,"        pub const unsafe fn unchecked_add(self, rhs: Self) -> Self {
+            assert_unsafe_precondition!(
+                check_language_ub,
+                concat!(stringify!($SelfT), ""::unchecked_add cannot overflow""),
+                (
+                    lhs: $SelfT = self,
+                    rhs: $SelfT = rhs,
+                ) => !lhs.overflowing_add(rhs).1,
+            );
+
+            // SAFETY: this is guaranteed to be safe by the caller.
+            unsafe {
+                intrinsics::unchecked_add(self, rhs)
+            }
+        }
+","pub const fn checked_add(self, rhs: Self) -> Option<Self> {
+            // This used to use `overflowing_add`, but that means it ends up being
+            // a `wrapping_add`, losing some optimization opportunities. Notably,
+            // phrasing it this way helps `.checked_add(1)` optimize to a check
+            // against `MAX` and a `add nuw`.
+            // Per <https://github.com/rust-lang/rust/pull/124114#issuecomment-2066173305>,
+            // LLVM is happy to re-form the intrinsic later if useful.
+
+            if intrinsics::unlikely(intrinsics::add_with_overflow(self, rhs).1) {
+                None
+            } else {
+                // SAFETY: Just checked it doesn't overflow
+                Some(unsafe { intrinsics::unchecked_add(self, rhs) })
+            }
+        }",The caller has to promise there is no overflow.,overflow/nonzero,exposed,
+../../refs/rust/library/core/src/num/uint_macros.rs,num,795,809,"        pub const unsafe fn unchecked_sub(self, rhs: Self) -> Self {
+            assert_unsafe_precondition!(
+                check_language_ub,
+                concat!(stringify!($SelfT), ""::unchecked_sub cannot overflow""),
+                (
+                    lhs: $SelfT = self,
+                    rhs: $SelfT = rhs,
+                ) => !lhs.overflowing_sub(rhs).1,
+            );
+
+            // SAFETY: this is guaranteed to be safe by the caller.
+            unsafe {
+                intrinsics::unchecked_sub(self, rhs)
+            }
+        }
+","pub const fn checked_sub(self, rhs: Self) -> Option<Self> {
+            // Per PR#103299, there's no advantage to the `overflowing` intrinsic
+            // for *unsigned* subtraction and we just emit the manual check anyway.
+            // Thus, rather than using `overflowing_sub` that produces a wrapping
+            // subtraction, check it ourself so we can use an unchecked one.
+
+            if self < rhs {
+                None
+            } else {
+                // SAFETY: just checked this can't overflow
+                Some(unsafe { intrinsics::unchecked_sub(self, rhs) })
+            }
+        }",The caller has to promise there is no overflow.,overflow/nonzero,exposed,
+../../refs/rust/library/core/src/num/uint_macros.rs,num,978,992,"        pub const unsafe fn unchecked_mul(self, rhs: Self) -> Self {
+            assert_unsafe_precondition!(
+                check_language_ub,
+                concat!(stringify!($SelfT), ""::unchecked_mul cannot overflow""),
+                (
+                    lhs: $SelfT = self,
+                    rhs: $SelfT = rhs,
+                ) => !lhs.overflowing_mul(rhs).1,
+            );
+
+            // SAFETY: this is guaranteed to be safe by the caller.
+            unsafe {
+                intrinsics::unchecked_mul(self, rhs)
+            }
+        }
+","pub const fn checked_mul(self, rhs: Self) -> Option<Self> {
+            let (a, b) = self.overflowing_mul(rhs);
+            if intrinsics::unlikely(b) { None } else { Some(a) }
+        }",The caller has to promise there is no overflow.,overflow/nonzero,exposed,
+../../refs/rust/library/core/src/num/uint_macros.rs,num,1592,1605,"        pub const unsafe fn unchecked_shl(self, rhs: u32) -> Self {
+            assert_unsafe_precondition!(
+                check_language_ub,
+                concat!(stringify!($SelfT), ""::unchecked_shl cannot overflow""),
+                (
+                    rhs: u32 = rhs,
+                ) => rhs < <$ActualT>::BITS,
+            );
+
+            // SAFETY: this is guaranteed to be safe by the caller.
+            unsafe {
+                intrinsics::unchecked_shl(self, rhs)
+            }
+        }
+","pub const fn checked_shl(self, rhs: u32) -> Option<Self> {
+            // Not using overflowing_shl as that's a wrapping shift
+            if rhs < Self::BITS {
+                // SAFETY: just checked the RHS is in-range
+                Some(unsafe { self.unchecked_shl(rhs) })
+            } else {
+                None
+            }
+        }",The caller has to promise there is no overflow.,overflow/nonzero,exposed,
+../../refs/rust/library/core/src/num/uint_macros.rs,num,1713,1726,"        pub const unsafe fn unchecked_shr(self, rhs: u32) -> Self {
+            assert_unsafe_precondition!(
+                check_language_ub,
+                concat!(stringify!($SelfT), ""::unchecked_shr cannot overflow""),
+                (
+                    rhs: u32 = rhs,
+                ) => rhs < <$ActualT>::BITS,
+            );
+
+            // SAFETY: this is guaranteed to be safe by the caller.
+            unsafe {
+                intrinsics::unchecked_shr(self, rhs)
+            }
+        }
+","pub const fn checked_shr(self, rhs: u32) -> Option<Self> {
+            // Not using overflowing_shr as that's a wrapping shift
+            if rhs < Self::BITS {
+                // SAFETY: just checked the RHS is in-range
+                Some(unsafe { self.unchecked_shr(rhs) })
+            } else {
+                None
+            }
+        }",The caller has to promise there is no overflow.,overflow/nonzero,exposed,
